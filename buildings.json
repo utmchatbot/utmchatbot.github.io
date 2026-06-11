@@ -1,0 +1,218 @@
+[
+  {
+    "Name": "Arked Angkasa",
+    "Area": "Kolej Tun Dr Ismail",
+    "Latitude": 1.56705690487386,
+    "Longitude": 103.634665086624,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "Arked Lestari",
+    "Area": "Kolej 9",
+    "Latitude": 1.55942529276243,
+    "Longitude": 103.648666518512,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "Arked Meranti",
+    "Area": "Universiti Teknologi Malaysia",
+    "Latitude": 1.55971655450478,
+    "Longitude": 103.633751484403,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "Balai Cerap",
+    "Area": "UTM Observation Park",
+    "Latitude": 1.57020581119465,
+    "Longitude": 103.64476135894,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "Cengal Parcel Point (CPP)",
+    "Area": "Universiti Teknologi Malaysia",
+    "Latitude": 1.56238145325451,
+    "Longitude": 103.628474815133,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "Dewan Sultan Iskandar",
+    "Area": "Universiti Teknologi Malaysia",
+    "Latitude": 1.55939164068661,
+    "Longitude": 103.638436593777,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "G25",
+    "Area": "Kolej Rahman Putra",
+    "Latitude": 1.55705612843031,
+    "Longitude": 103.630959287359,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "H01",
+    "Area": "Kolej Tun Fatimah",
+    "Latitude": 1.55991430530785,
+    "Longitude": 103.63177467887,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "H25",
+    "Area": "Kolej Tun Fatimah",
+    "Latitude": 1.56140600759392,
+    "Longitude": 103.630455968664,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "MA1",
+    "Area": "Kolej Tun Dr Ismail",
+    "Latitude": 1.56598827113599,
+    "Longitude": 103.63323521011,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "Masjid Sultan Ismail",
+    "Area": "Universiti Teknologi Malaysia",
+    "Latitude": 1.55935879451515,
+    "Longitude": 103.637611023324,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "N28",
+    "Area": "Faculty of Computing",
+    "Latitude": 1.56420305926606,
+    "Longitude": 103.638064929335,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "N28A",
+    "Area": "Faculty of Computing",
+    "Latitude": 1.56375728024991,
+    "Longitude": 103.63816615936,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "One Stop Parcel Centre (OPC)",
+    "Area": "Kolej Rahman Putra",
+    "Latitude": 1.55781445684432,
+    "Longitude": 103.632941999113,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "Penerbit UTM Press",
+    "Area": "Universiti Teknologi Malaysia",
+    "Latitude": 1.55314061378962,
+    "Longitude": 103.641280024268,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "Perpustakaan Raja Zarith Sofiah",
+    "Area": "Universiti Teknologi Malaysia",
+    "Latitude": 1.56400809646649,
+    "Longitude": 103.652058328811,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "Perpustakaan Sultanah Zanariah",
+    "Area": "Universiti Teknologi Malaysia",
+    "Latitude": 1.55954522485688,
+    "Longitude": 103.63685635058,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "Rumah Alumni",
+    "Area": "Universiti Teknologi Malaysia",
+    "Latitude": 1.5529940899219,
+    "Longitude": 103.641589169984,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "UA2",
+    "Area": "Kolej 9",
+    "Latitude": 1.55898050388048,
+    "Longitude": 103.649698872048,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "UB1",
+    "Area": "Kolej 10",
+    "Latitude": 1.56061177310662,
+    "Longitude": 103.649693618267,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "UB2",
+    "Area": "Kolej 10",
+    "Latitude": 1.56124244942535,
+    "Longitude": 103.649037912238,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "W3",
+    "Area": "Kolej Datin Seri Endon",
+    "Latitude": 1.56655116345096,
+    "Longitude": 103.626187002141,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "WA1",
+    "Area": "Kolej Datin Seri Endon",
+    "Latitude": 1.56641500759558,
+    "Longitude": 103.623995073289,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  },
+  {
+    "Name": "",
+    "Area": "",
+    "Latitude": 1.55681061856062,
+    "Longitude": 103.636722901121,
+    "Open": "",
+    "Close": "",
+    "Status": ""
+  }
+]
