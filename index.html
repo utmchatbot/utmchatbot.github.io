@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UTM Map</title>
     
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     
     <style>
       body, html {
@@ -488,7 +488,7 @@
         const fromInput = document.getElementById('search-from');
         const fromBox = document.getElementById('search-from-box');
         
-        let activeInput = toInput; // Default focus to destination
+        let activeInput = toInput; 
         let activeHint = document.getElementById('search-hint-to');
         let activeBox = toBox;
         let activeAutofillValue = "";
@@ -567,74 +567,68 @@
           if (!e.target.closest('.search-container')) dropdownMenu.classList.remove('show');
         });
 
-        // GPS Logc
         document.getElementById('gps-btn').addEventListener('click', function(e) {
-  e.stopPropagation();
-  const btn = this;
-  
-  updateActiveInput(fromInput, document.getElementById('search-hint-from'), fromBox, "Confirm starting point");
-  btn.classList.add('active');
+          e.stopPropagation();
+          const btn = this;
+          
+          updateActiveInput(fromInput, document.getElementById('search-hint-from'), fromBox, "Confirm starting point");
+          btn.classList.add('active');
 
-  const tg = window.Telegram?.WebApp;
+          const tg = window.Telegram?.WebApp;
 
-  // Helper to handle the UI update after getting a location
-  const handleLocationFound = (lat, lng) => {
-    const loc = [lat, lng];
-    map.setView(loc, maxZoom);
-    setPin(loc);
-    
-    fromInput.value = "Current Location";
-    fromInput.readOnly = true;
-    document.getElementById('clear-btn-from').classList.add('show');
-    document.getElementById('search-icon-from').classList.add('hide');
-    btn.classList.remove('active');
-  };
+          const handleLocationFound = (lat, lng) => {
+            const loc = [lat, lng];
+            map.setView(loc, maxZoom);
+            setPin(loc);
+            
+            fromInput.value = "Current Location";
+            fromInput.readOnly = true;
+            document.getElementById('clear-btn-from').classList.add('show');
+            document.getElementById('search-icon-from').classList.add('hide');
+            btn.classList.remove('active');
+          };
 
-  // 1. Check if Telegram WebApp is active AND supports LocationManager (API 8.0+)
-  if (tg && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0') && tg.LocationManager) {
-    const locManager = tg.LocationManager;
-    
-    const fetchLocation = () => {
-      locManager.getLocation((location) => {
-        if (location) {
-          handleLocationFound(location.latitude, location.longitude);
-        } else {
-          alert("Location access was denied or is unavailable through Telegram.");
-          btn.classList.remove('active');
-        }
-      });
-    };
+          if (tg && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0') && tg.LocationManager) {
+            const locManager = tg.LocationManager;
+            
+            const fetchLocation = () => {
+              locManager.getLocation((location) => {
+                if (location) {
+                  handleLocationFound(location.latitude, location.longitude);
+                } else {
+                  alert("Location access was denied or is unavailable through Telegram.");
+                  btn.classList.remove('active');
+                }
+              });
+            };
 
-    // Initialize if needed
-    if (!locManager.isInited) {
-      locManager.init(() => fetchLocation());
-    } else {
-      fetchLocation();
-    }
-  } 
-  // 2. Fallback to standard web geolocation (For older Telegram clients and web browsers)
-  else if ("geolocation" in navigator) {
-    navigator.geolocation.getCurrentPosition(
-      function(position) {
-        handleLocationFound(position.coords.latitude, position.coords.longitude);
-      }, 
-      function(error) {
-        alert("Unable to retrieve your location. Please check your browser permissions.");
-        btn.classList.remove('active');
-      }
-    );
-  } else {
-    alert("Geolocation is not supported by your environment.");
-    btn.classList.remove('active');
-  }
-});
+            if (!locManager.isInited) {
+              locManager.init(() => fetchLocation());
+            } else {
+              fetchLocation();
+            }
+          } 
+          else if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+              function(position) {
+                handleLocationFound(position.coords.latitude, position.coords.longitude);
+              }, 
+              function(error) {
+                alert("Unable to retrieve your location. Please check your browser permissions.");
+                btn.classList.remove('active');
+              }
+            );
+          } else {
+            alert("Geolocation is not supported by your environment.");
+            btn.classList.remove('active');
+          }
+        });
 
         function bindSearchEvents(inputEl, hintEl, clearBtnEl, searchIconEl, boxEl, defaultPlaceholder, confirmText) {
           
           inputEl.addEventListener('focus', () => {
             updateActiveInput(inputEl, hintEl, boxEl, confirmText);
             
-            // If there's already text, trigger search again to show dropdown
             if(inputEl.value.trim() !== '') {
                inputEl.dispatchEvent(new Event('input'));
             }
@@ -762,7 +756,6 @@
         );
 
         confirmBtn.addEventListener('click', function() {
-          const location = map.getCenter();
           
           if (activeInput.value === '') {
             const originalPlaceholder = activeInput.placeholder;
@@ -781,12 +774,13 @@
             activeInput.focus();
             return;
           } 
+
+          const location = map.getCenter();
           
           if (activeInput === toInput) {
             locationData.to = { name: toInput.value, lat: location.lat, lng: location.lng };
             toInput.readOnly = true;
             
-            // Send the suggestion to your Google Apps Script API
             const gasApiUrl = "https://script.google.com/macros/s/AKfycbw8hltr0E7awYsdDNe3lu6AzD0zwJe7owd7ktcoQ_Y/exec"; 
             
             fetch(gasApiUrl, {
