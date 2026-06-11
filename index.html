@@ -762,42 +762,49 @@
         );
 
         confirmBtn.addEventListener('click', function() {
-          
-          if (activeInput === toInput) {
-          locationData.to = { name: toInput.value, lat: location.lat, lng: location.lng };
-          toInput.readOnly = true;
-          
-          // Send the suggestion to your Google Apps Script API
-          const gasApiUrl = "https://script.google.com/macros/s/AKfycbw8hltr0E7awYsdDNe3lu6AzD0zwJe7owd7ktcoQ_Y/exec"; 
-          
-          fetch(gasApiUrl, {
-            method: 'POST',
-            body: JSON.stringify({
-              action: 'suggestLocation',
-              name: toInput.value,
-              latitude: location.lat,
-              longitude: location.lng
-            })
-          })
-          .then(response => response.json())
-          .then(data => {
-            if(data.success) {
-              console.log("Location securely saved to database!");
-            }
-          })
-          .catch(error => console.error("Error saving location:", error));
-
           const location = map.getCenter();
+          
+          if (activeInput.value === '') {
+            const originalPlaceholder = activeInput.placeholder;
+            
+            activeBox.classList.add('error-shake');
+            activeInput.classList.add('error-placeholder');
+            
+            setTimeout(() => { 
+              activeBox.classList.remove('error-shake');
+              activeInput.classList.remove('error-placeholder');
+            }, 400);
+            
+            activeInput.addEventListener('input', function resetError() {
+              activeInput.placeholder = originalPlaceholder;
+            }, { once: true });
+            activeInput.focus();
+            return;
+          } 
           
           if (activeInput === toInput) {
             locationData.to = { name: toInput.value, lat: location.lat, lng: location.lng };
             toInput.readOnly = true;
             
-            if (typeof google !== 'undefined' && google.script) {
-              google.script.run.withSuccessHandler(function() { 
-                console.log("Destination saved successfully!");
-              }).setNewLocation(toInput.value, location.lat, location.lng);
-            }
+            // Send the suggestion to your Google Apps Script API
+            const gasApiUrl = "https://script.google.com/macros/s/AKfycbw8hltr0E7awYsdDNe3lu6AzD0zwJe7owd7ktcoQ_Y/exec"; 
+            
+            fetch(gasApiUrl, {
+              method: 'POST',
+              body: JSON.stringify({
+                action: 'suggestLocation',
+                name: toInput.value,
+                latitude: location.lat,
+                longitude: location.lng
+              })
+            })
+            .then(response => response.json())
+            .then(data => {
+              if(data.success) {
+                console.log("Location securely saved to database!");
+              }
+            })
+            .catch(error => console.error("Error saving location:", error));
             
             if(fromInput.value === '') {
                 updateActiveInput(fromInput, document.getElementById('search-hint-from'), fromBox, "Confirm starting point");
