@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UTM Map</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+      body, html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #000;
+      }
+
+      #map {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        z-index: 1;
+      }
+
+      .ui {
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        pointer-events: none; 
+        padding: 20px 24px;
+      }
+
+      .search-container {
+        width: 100%;
+        max-width: 550px;
+        position: relative;
+        pointer-events: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .glass-search-box {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 6px 18px;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 
+          0 4px 30px rgba(0, 0, 0, 0.08),
+          0 1px 2px rgba(0, 0, 0, 0.04),
+          inset 0 1px 1px rgba(255, 255, 255, 0.4);
+        transition: background 0.3s, box-shadow 0.3s, transform 0.3s;
+      }
+
+      .glass-search-box:focus-within, .glass-search-box.active-box {
+        background: rgba(255, 255, 255, 0.88);
+        box-shadow: 
+          0 12px 40px rgba(0, 0, 0, 0.18),
+          inset 0 1px 1px rgba(255, 255, 255, 0.6);
+        transform: scale(1.01);
+      }
+
+      .input-wrapper {
+        flex: 1;
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      .search-input {
+        position: relative;
+        z-index: 2;
+        color: #1d1d1f;
+      }
+
+      .search-input, .autocomplete-hint {
+        font-size: 1.05rem;
+        font-family: inherit;
+        font-weight: 400;
+        letter-spacing: -0.2px;
+        margin: 0;
+        padding: 0;
+        border: none;
+        outline: none;
+        background: transparent;
+        height: 44px;
+        line-height: 44px;
+        width: 100%;
+      }
+
+      .search-input.error-placeholder::placeholder {
+        color: #d32f2f;
+        opacity: 0.8;
+      }
+
+      .autocomplete-hint {
+        position: absolute;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        color: rgba(0, 0, 0, 0.32);
+        white-space: pre;
+        pointer-events: none;
+      }
+
+      .action-cluster {
+        display: flex;
+        align-items: center;
+        margin-left: 8px;
+        height: 24px;
+        position: relative;
+      }
+
+      .icon-stack {
+        display: grid;
+        align-items: center;
+        width: 24px;
+        height: 24px;
+      }
+
+      .clear-search-btn, .search-icon {
+        grid-area: 1 / 1;
+      }
+
+      .clear-search-btn {
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.06);
+        border: none;
+        border-radius: 50%;
+        color: rgba(0, 0, 0, 0.5);
+        font-size: 0.7rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s, background 0.2s, visibility 0.2s;
+        z-index: 2;
+      }
+
+      .clear-search-btn.show {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .clear-search-btn:hover {
+        background: rgba(0, 0, 0, 0.12);
+        color: #000;
+      }
+
+      .search-icon {
+        color: rgba(0, 0, 0, 0.45);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.2s, visibility 0.2s;
+      }
+
+      .search-icon.hide {
+        opacity: 0;
+        visibility: hidden;
+      }
+      
+      .gps-icon {
+        margin-left: 10px;
+        color: rgba(0, 0, 0, 0.45);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.2s, transform 0.2s;
+      }
+
+      .gps-icon:hover {
+        color: #007aff;
+        transform: scale(1.1);
+      }
+      
+      .gps-icon.active {
+        color: #007aff;
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+      }
+
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        20%, 60% { transform: translateX(-6px); }
+        40%, 80% { transform: translateX(6px); }
+      }
+
+      .glass-search-box.error-shake {
+        animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+        border-color: rgba(255, 59, 48, 0.8);
+        box-shadow: 
+          0 4px 30px rgba(255, 59, 48, 0.15),
+          inset 0 1px 1px rgba(255, 255, 255, 0.6);
+      }
+
+      .suggestions-dropdown {
+        position: relative; 
+        width: 100%;
+        box-sizing: border-box;
+        max-height: 320px;
+        overflow-y: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none; 
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(35px) saturate(210%);
+        -webkit-backdrop-filter: blur(35px) saturate(210%);
+        border: 10px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        z-index: 10;
+        
+        display: none; 
+        opacity: 0;
+        transform: translateY(-8px);
+        transition: opacity 0.3s, transform 0.3s;
+        will-change: opacity, transform;
+      }
+      
+      .suggestions-dropdown::-webkit-scrollbar {
+        display: none;
+      }
+
+      .suggestions-dropdown.show {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .dropdown-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        cursor: pointer;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+        transition: background-color 0.2s;
+      }
+
+      .dropdown-item:last-child {
+        border-bottom: none;
+      }
+
+      .dropdown-item:hover {
+        background-color: rgba(0, 0, 0, 0.04);
+      }
+
+      .item-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        overflow: hidden;
+        padding-right: 12px;
+      }
+
+      .item-name {
+        font-size: 0.98rem;
+        font-weight: 600;
+        color: #1d1d1f;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .item-area {
+        font-size: 0.82rem;
+        color: rgba(0, 0, 0, 0.55);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .status-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: -0.1px;
+        padding: 4px 12px;
+        border-radius: 99px;
+        white-space: nowrap;
+        text-align: center;
+        box-shadow: inset 0 1px 0px rgba(255, 255, 255, 0.2);
+      }
+
+      .status-badge.open { background: rgba(52, 199, 89, 0.15); color: #1a7f37; }
+      .status-badge.closing-soon { background: rgba(255, 149, 0, 0.15); color: #b25900; }
+      .status-badge.closed { background: rgba(255, 59, 48, 0.14); color: #d32f2f; }
+      .status-badge.under-maintenance { background: rgba(88, 86, 214, 0.15); color: #4c4aab; }
+      .status-badge.permanently-closed { background: rgba(142, 142, 147, 0.18); color: #55555a; }
+
+      .glass-confirm-btn {
+        position: fixed;
+        bottom: 32px;
+        left: 50%;
+        width: calc(100% - 48px);
+        max-width: 500px;
+        box-sizing: border-box;
+        padding: 16px 24px;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 
+          0 8px 32px rgba(0, 0, 0, 0.12),
+          inset 0 1px 1px rgba(255, 255, 255, 0.6);
+        font-family: inherit;
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #1d1d1f;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        pointer-events: none;
+        
+        opacity: 0;
+        transform: translate(-50%, 30px);
+        transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s;
+      }
+
+      .glass-confirm-btn.show {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translate(-50%, 0);
+      }
+
+      .glass-confirm-btn:active {
+        transform: translate(-50%, 2px) scale(0.98);
+        background: rgba(255, 255, 255, 0.95);
+      }
+
+      #center-pin-container {
+        position: absolute;
+        z-index: 2;
+        top: 50%;
+        left: 50%;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform: translate(-50%, -100%) scale(0.5); 
+        transition: opacity 0.3s, visibility 0.1s, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+
+      #center-pin-container.show {
+        opacity: 0.75;
+        visibility: visible;
+        transform: translate(-50%, -100%) scale(1);
+      }
+
+      #center-pin-container.animating img {
+        animation: pinFloat 0.6s ease-in-out infinite alternate;
+      }
+
+      @keyframes pinFloat {
+        0% { transform: translateY(0); }
+        100% { transform: translateY(-14px); }
+      }
+
+      .leaflet-top { top: 90px !important; transition: bottom 0.3s ease; }
+      .leaflet-bottom { bottom: 10px !important; transition: bottom 0.3s ease; }
+      .leaflet-left { left: 20px !important; transition: bottom 0.3s ease; }
+
+    </style>
+  </head>
+  <body>
+    
+    <div id="map"></div>
+    <div id="center-pin-container">
+      <img src="https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png">
+    </div>
+    
+    <div class="ui">
+      <div class="search-container">
+        
+        <div class="glass-search-box" id="search-from-box">
+          <div class="input-wrapper">
+            <div id="search-hint-from" class="autocomplete-hint"></div>
+            <input type="text" id="search-from" class="search-input" placeholder="Set your starting point" autocomplete="off">
+          </div>
+          
+          <div class="action-cluster">
+            <div class="icon-stack">
+              <button class="clear-search-btn" id="clear-btn-from">✕</button>
+              <div class="search-icon" id="search-icon-from">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </div>
+            </div>
+            <div class="gps-icon" id="gps-btn" title="Use current location">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="2" x2="12" y2="6"></line>
+                <line x1="12" y1="18" x2="12" y2="22"></line>
+                <line x1="4" y1="12" x2="8" y2="12"></line>
+                <line x1="16" y1="12" x2="20" y2="12"></line>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-search-box active-box" id="search-to-box">
+          <div class="input-wrapper">
+            <div id="search-hint-to" class="autocomplete-hint"></div>
+            <input type="text" id="search-to" class="search-input" placeholder="Search your destination" autocomplete="off">
+          </div>
+          
+          <div class="action-cluster">
+            <div class="icon-stack">
+              <button class="clear-search-btn" id="clear-btn-to">✕</button>
+              <div class="search-icon" id="search-icon-to">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="dropdown-menu" class="suggestions-dropdown"></div>
+        <button id="confirm-btn" class="glass-confirm-btn">Confirm destination</button>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js?62"></script>
+    <script>
+
+      let buildingsData = [];
+      fetch('./buildings.json')
+        .then(response => response.json())
+        .then(data => {
+          buildingsData = data;
+          console.log("Buildings loaded locally:", buildingsData.length);
+        })
+        .catch(error => console.error("Error loading buildings data:", error));
+
+      document.addEventListener("DOMContentLoaded", function() {
+
+        const map = L.map('map', { zoomControl: false }).setView([1.56, 103.638], 16);
+        const maxZoom = map.getMaxZoom() ? map.getMaxZoom() : 18;
+        L.control.zoom({ position: 'topleft' }).addTo(map);
+        map.attributionControl.setPosition('bottomleft');
+        map.attributionControl.setPrefix(false);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          attribution: '© <a href="https://t.me/utmconfession" onclick="if(window.Telegram && window.Telegram.WebApp) { Telegram.WebApp.openTelegramLink(\'https://t.me/utmconfession\'); return false; } else { window.open(\'https://t.me/utmconfession\', \'_blank\'); return false; }">UTM Confession</a>'
+        }).addTo(map);
+
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', () => {
+            map.invalidateSize();
+            if (currentMarker) {
+              setTimeout(() => {
+                map.panTo(currentMarker.getLatLng());
+              }, 100);
+            }
+          });
+        }
+
+        const confirmBtn = document.getElementById('confirm-btn');
+        const dropdownMenu = document.getElementById('dropdown-menu');
+        const centerPin = document.getElementById('center-pin-container');
+        
+        const toInput = document.getElementById('search-to');
+        const toBox = document.getElementById('search-to-box');
+        
+        const fromInput = document.getElementById('search-from');
+        const fromBox = document.getElementById('search-from-box');
+        
+        let activeInput = toInput; // Default focus to destination
+        let activeHint = document.getElementById('search-hint-to');
+        let activeBox = toBox;
+        let activeAutofillValue = "";
+        let currentMarker = null;
+        let isSelection = false;
+        
+        let locationData = {
+          to: null,
+          from: null
+        };
+        
+        function updateActiveInput(newInput, newHint, newBox, contextText) {
+          activeInput = newInput;
+          activeHint = newHint;
+          
+          toBox.classList.remove('active-box');
+          fromBox.classList.remove('active-box');
+          newBox.classList.add('active-box');
+          activeBox = newBox;
+
+          confirmBtn.innerText = contextText;
+        }
+
+        function resetSearchUI() {
+          dropdownMenu.classList.remove('show');
+          if (activeHint) activeHint.textContent = "";
+          activeAutofillValue = "";
+        }
+        
+        function setPin(loc){
+          if (currentMarker) {
+            currentMarker.setLatLng(loc).addTo(map);
+            centerPin.classList.remove('show', 'animating');
+          } else {
+            currentMarker = L.marker(loc).addTo(map);
+          }
+          centerPin.classList.remove('show', 'animating');
+          confirmBtn.classList.add('show');
+        }
+
+        map.on('click', function(e) {
+          map.setView(e.latlng, maxZoom);
+          setPin(e.latlng);
+        });
+
+        map.on('movestart', function() {
+          if (currentMarker && !isSelection) {
+            map.removeLayer(currentMarker);
+            centerPin.classList.add('show', 'animating');
+          }
+          resetSearchUI();
+        });
+        
+        map.on('moveend', function() {
+          if (isSelection){ 
+            isSelection = false;
+          } else if (currentMarker) {
+            setPin(map.getCenter());
+            
+            activeInput.value = '';
+            activeInput.readOnly = false;
+            activeInput.style.cursor = 'default';
+            
+            const targetIcon = document.getElementById(`search-icon-${activeInput.id.split('-')[1]}`);
+            const targetClear = document.getElementById(`clear-btn-${activeInput.id.split('-')[1]}`);
+            
+            targetIcon.classList.add('hide');
+            targetClear.classList.add('show');
+            
+            confirmBtn.innerText = "Suggest name";
+            activeInput.placeholder = "Name this location";
+          }
+        });
+
+        document.addEventListener('click', function(e) {
+          if (!e.target.closest('.search-container')) dropdownMenu.classList.remove('show');
+        });
+
+        // GPS Logc
+        document.getElementById('gps-btn').addEventListener('click', function(e) {
+  e.stopPropagation();
+  const btn = this;
+  
+  updateActiveInput(fromInput, document.getElementById('search-hint-from'), fromBox, "Confirm starting point");
+  btn.classList.add('active');
+
+  const tg = window.Telegram?.WebApp;
+
+  // Helper to handle the UI update after getting a location
+  const handleLocationFound = (lat, lng) => {
+    const loc = [lat, lng];
+    map.setView(loc, maxZoom);
+    setPin(loc);
+    
+    fromInput.value = "Current Location";
+    fromInput.readOnly = true;
+    document.getElementById('clear-btn-from').classList.add('show');
+    document.getElementById('search-icon-from').classList.add('hide');
+    btn.classList.remove('active');
+  };
+
+  // 1. Check if Telegram WebApp is active AND supports LocationManager (API 8.0+)
+  if (tg && tg.isVersionAtLeast && tg.isVersionAtLeast('8.0') && tg.LocationManager) {
+    const locManager = tg.LocationManager;
+    
+    const fetchLocation = () => {
+      locManager.getLocation((location) => {
+        if (location) {
+          handleLocationFound(location.latitude, location.longitude);
+        } else {
+          alert("Location access was denied or is unavailable through Telegram.");
+          btn.classList.remove('active');
+        }
+      });
+    };
+
+    // Initialize if needed
+    if (!locManager.isInited) {
+      locManager.init(() => fetchLocation());
+    } else {
+      fetchLocation();
+    }
+  } 
+  // 2. Fallback to standard web geolocation (For older Telegram clients and web browsers)
+  else if ("geolocation" in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      function(position) {
+        handleLocationFound(position.coords.latitude, position.coords.longitude);
+      }, 
+      function(error) {
+        alert("Unable to retrieve your location. Please check your browser permissions.");
+        btn.classList.remove('active');
+      }
+    );
+  } else {
+    alert("Geolocation is not supported by your environment.");
+    btn.classList.remove('active');
+  }
+});
+
+        function bindSearchEvents(inputEl, hintEl, clearBtnEl, searchIconEl, boxEl, defaultPlaceholder, confirmText) {
+          
+          inputEl.addEventListener('focus', () => {
+            updateActiveInput(inputEl, hintEl, boxEl, confirmText);
+            
+            // If there's already text, trigger search again to show dropdown
+            if(inputEl.value.trim() !== '') {
+               inputEl.dispatchEvent(new Event('input'));
+            }
+          });
+
+          inputEl.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab' && activeAutofillValue) {
+              e.preventDefault(); 
+              inputEl.value = activeAutofillValue;
+              hintEl.textContent = "";
+              inputEl.dispatchEvent(new Event('input'));
+            }
+          });
+
+          clearBtnEl.addEventListener('click', function() {
+            resetSearchUI();
+            isSelection = false;
+            inputEl.value = '';
+            inputEl.readOnly = false;
+            inputEl.placeholder = defaultPlaceholder;
+            
+            if (currentMarker && activeInput === inputEl) {
+              map.removeLayer(currentMarker);
+              currentMarker = null;
+            }
+            
+            confirmBtn.classList.remove('show');
+            confirmBtn.innerText = confirmText;
+            clearBtnEl.classList.remove('show');
+            searchIconEl.classList.remove('hide');
+            inputEl.focus();
+          });
+
+          inputEl.addEventListener('input', function() {
+            const value = this.value.trim().toLowerCase();
+            searchIconEl.classList.add('hide');
+            clearBtnEl.classList.add('show');
+            
+            if (!currentMarker || isSelection || activeInput === inputEl) {
+              confirmBtn.classList.remove('show');
+              let escapedValue = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const searchRegex = new RegExp(`\\b${escapedValue}`, 'i');
+
+              const filtered = buildingsData.filter(b => 
+                searchRegex.test(b.name.toLowerCase()) || searchRegex.test(b.area.toLowerCase())
+              ).slice(0, 7);
+
+              dropdownMenu.innerHTML = '';
+
+              if (filtered.length === 0 || value === '') {
+                dropdownMenu.classList.remove('show');
+                hintEl.textContent = "";
+                activeAutofillValue = "";
+                return;
+              }
+
+              const handleLocationSelect = (item) => {
+                isSelection = true;
+                inputEl.value = item.name;
+                inputEl.readOnly = true;
+                const targetLatLng = [item.latitude, item.longitude];
+                map.setView(targetLatLng, maxZoom);
+                setPin(targetLatLng);
+                resetSearchUI();
+                confirmBtn.innerText = confirmText;
+              };
+
+              filtered.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'dropdown-item';
+                const statusClass = item.status.toLowerCase().replace(/\s+/g, '-');
+
+                row.innerHTML = `
+                  <div class="item-info">
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-area">${item.area}</div>
+                  </div>
+                  <div class="status-badge ${statusClass}">${item.status}</div>
+                `;
+
+                row.addEventListener('click', () => {
+                  handleLocationSelect(item);
+                });
+
+                dropdownMenu.appendChild(row);
+              });
+
+              dropdownMenu.classList.add('show');
+              
+              if (filtered.length > 0) {
+                const match = filtered[0];
+                if (match.name.toLowerCase().startsWith(value)) {
+                  hintEl.textContent = inputEl.value + match.name.slice(value.length);
+                  activeAutofillValue = match.name;
+                  return;
+                }
+                if (match.area.toLowerCase().startsWith(value)) {
+                  hintEl.textContent = inputEl.value + match.area.slice(value.length);
+                  activeAutofillValue = match.area;
+                  return;
+                }
+              }
+            }
+          });
+        }
+
+        bindSearchEvents(
+          fromInput, 
+          document.getElementById('search-hint-from'), 
+          document.getElementById('clear-btn-from'), 
+          document.getElementById('search-icon-from'),
+          fromBox,
+          "Set your starting point",
+          "Confirm starting point"
+        );
+
+        bindSearchEvents(
+          toInput, 
+          document.getElementById('search-hint-to'), 
+          document.getElementById('clear-btn-to'), 
+          document.getElementById('search-icon-to'),
+          toBox,
+          "Search your destination",
+          "Confirm destination"
+        );
+
+        confirmBtn.addEventListener('click', function() {
+          
+          if (activeInput === toInput) {
+          locationData.to = { name: toInput.value, lat: location.lat, lng: location.lng };
+          toInput.readOnly = true;
+          
+          // Send the suggestion to your Google Apps Script API
+          const gasApiUrl = "https://script.google.com/macros/s/AKfycbw8hltr0E7awYsdDNe3lu6AzD0zwJe7owd7ktcoQ_Y/exec"; 
+          
+          fetch(gasApiUrl, {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'suggestLocation',
+              name: toInput.value,
+              latitude: location.lat,
+              longitude: location.lng
+            })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if(data.success) {
+              console.log("Location securely saved to database!");
+            }
+          })
+          .catch(error => console.error("Error saving location:", error));
+
+          const location = map.getCenter();
+          
+          if (activeInput === toInput) {
+            locationData.to = { name: toInput.value, lat: location.lat, lng: location.lng };
+            toInput.readOnly = true;
+            
+            if (typeof google !== 'undefined' && google.script) {
+              google.script.run.withSuccessHandler(function() { 
+                console.log("Destination saved successfully!");
+              }).setNewLocation(toInput.value, location.lat, location.lng);
+            }
+            
+            if(fromInput.value === '') {
+                updateActiveInput(fromInput, document.getElementById('search-hint-from'), fromBox, "Confirm starting point");
+                if(currentMarker) { map.removeLayer(currentMarker); currentMarker = null; }
+                confirmBtn.classList.remove('show');
+                fromInput.focus();
+            } else {
+                confirmBtn.innerText = "Request Ride";
+                console.log("Ready to route:", locationData);
+            }
+            
+          } 
+          else if (activeInput === fromInput) {
+             locationData.from = { name: fromInput.value, lat: location.lat, lng: location.lng };
+             fromInput.readOnly = true;
+             
+             if(toInput.value === '') {
+                updateActiveInput(toInput, document.getElementById('search-hint-to'), toBox, "Confirm destination");
+                if(currentMarker) { map.removeLayer(currentMarker); currentMarker = null; }
+                confirmBtn.classList.remove('show');
+                toInput.focus();
+             } else {
+                confirmBtn.innerText = "Request Ride";
+                console.log("Ready to route:", locationData);
+             }
+          }
+        });
+
+      });
+
+    </script>
+  </body>
+</html>
