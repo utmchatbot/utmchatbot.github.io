@@ -256,7 +256,13 @@
             this.ui.searchInput.focus();
           } else if (window.Telegram?.WebApp) {
             const location = this.map.getCenter();
-            window.Telegram.WebApp.sendData(location);
+            window.Telegram.WebApp.sendData(
+              JSON.stringify({
+                // name: this.ui.searchInput.value,
+                lat: location.lat,
+                lng: location.lng,
+              }),
+            );
           } else {
             this.ui.confirmBtn.classList.remove("show");
             this.ui.searchInput.readOnly = true;
