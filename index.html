@@ -376,7 +376,7 @@
 
         handleLocationSelect(item) {
           this.state.isSelection = true;
-          this.ui.searchInput.input.blur();
+          this.ui.searchInput.blur();
           this.ui.searchInput.disabled = true;
           this.ui.searchInput.value = item.Name;
           this.ui.confirmBtn.classList.add("show");
