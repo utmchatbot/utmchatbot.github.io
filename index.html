@@ -23,25 +23,21 @@
 
     <div class="ui">
       <div class="search">
-        <div id="search-bar">
-          <div id="pin-icon">
-            <svg viewBox="0 0 24 24">
-              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
-              <circle cx="12" cy="10" r="3"></circle>
-            </svg>
-          </div>
+        <div id="find-bar" class="search-bar">
+          <div id="gps-icon">𖦏</div>
           <div class="input">
-            <div id="search-hint"></div>
+            <div id="find-hint"></div>
             <input
               type="text"
-              id="search-to"
-              placeholder="Search your destination"
+              id="search-from"
+              class="search-text"
+              placeholder="Find your starting point"
               autocomplete="off"
             />
           </div>
           <div class="action">
-            <button id="clear">✕</button>
-            <div id="search-icon">
+            <button id="clears" class="clear">✕</button>
+            <div id="find-icon" class="search-icon">
               <svg viewBox="0 0 24 24">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="22" y1="22" x2="19" y2="19"></line>
@@ -51,6 +47,33 @@
         </div>
 
         <div id="suggestions"></div>
+
+        <div id="search-bar" class="search-bar">
+          <svg viewBox="0 0 24 24">
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          <div class="input">
+            <div id="search-hint"></div>
+            <input
+              type="text"
+              id="search-to"
+              class="search-text"
+              placeholder="Search your destination"
+              autocomplete="off"
+            />
+          </div>
+          <div class="action">
+            <button id="clear" class="clear">✕</button>
+            <div id="search-icon" class="search-icon">
+              <svg viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="22" y1="22" x2="19" y2="19"></line>
+              </svg>
+            </div>
+          </div>
+        </div>
+
         <button id="confirm">Confirm destination</button>
       </div>
     </div>
@@ -68,6 +91,9 @@
 
       class MapApp {
         constructor() {
+          this.destination;
+          this.from;
+          this.telegram;
           this.state = {
             buildingsData: [],
             activeAutofillValue: "",
@@ -83,6 +109,7 @@
             searchIcon: document.getElementById("search-icon"),
             searchHint: document.getElementById("search-hint"),
             dropdownMenu: document.getElementById("suggestions"),
+            findBar: document.getElementById("find-bar"),
           };
           this.config = {
             defaultCenter: [1.56, 103.638],
@@ -95,6 +122,7 @@
           this.initMap();
           this.bindEvents();
           await this.loadData();
+          this.expandTelegram();
         }
 
         fixLeafletIcons() {
@@ -205,7 +233,7 @@
             this.ui.searchInput.placeholder = "Name this location";
             this.ui.confirmBtn.innerText = "Suggest name";
             this.ui.searchInput.style.cursor = "default";
-            this.ui.searchInput.readOnly = false;
+            this.ui.searchInput.disabled = false;
             this.ui.searchInput.value = "";
             this.ui.searchIcon.classList.add("hide");
             this.ui.clearBtn.classList.add("show");
@@ -226,7 +254,7 @@
           this.resetSearchUI();
           this.state.isSelection = false;
           this.ui.searchInput.value = "";
-          this.ui.searchInput.readOnly = false;
+          this.ui.searchInput.disabled = false;
           this.ui.searchInput.placeholder = "Search your destination";
 
           if (this.state.currentMarker) {
@@ -237,6 +265,7 @@
           this.ui.clearBtn.classList.remove("show");
           this.ui.searchIcon.classList.remove("hide");
           this.ui.confirmBtn.classList.remove("show");
+          this.ui.findBar.classList.remove("show");
 
           setTimeout(() => {
             this.ui.confirmBtn.innerText = "Confirm destination";
@@ -254,19 +283,31 @@
             }, 400);
 
             this.ui.searchInput.focus();
-          } else if (window.Telegram?.WebApp) {
-            const location = this.map.getCenter();
-            window.Telegram.WebApp.sendData(
-              JSON.stringify({
-                // name: this.ui.searchInput.value,
-                lat: location.lat,
-                lng: location.lng,
-              }),
-            );
           } else {
-            this.ui.confirmBtn.classList.remove("show");
-            this.ui.searchInput.readOnly = true;
+            this.destination = {
+              name: this.ui.searchInput.value,
+              lat: location.lat,
+              lng: location.lng,
+            };
+
+            this.ui.confirmBtn.innerHTML = `
+            <svg viewBox="0 0 24 24">
+              <polygon points="12 13 5 12 19 5 14 19"></polygon>
+            </svg>
+            </span>Use my current location</span>`;
+            this.ui.searchInput.disabled = true;
+            this.ui.findBar.classList.add("show");
           }
+          // if (this.telegram) {
+          //   const location = this.map.getCenter();
+          //   this.telegram.sendData(
+          //     JSON.stringify({
+          //       // name: this.ui.searchInput.value,
+          //       lat: location.lat,
+          //       lng: location.lng,
+          //     }),
+          //   );
+          // }
         }
 
         handleSearchInput(value) {
@@ -332,14 +373,23 @@
 
         handleLocationSelect(item) {
           this.state.isSelection = true;
-          this.ui.searchInput.readOnly = true;
+          this.ui.searchInput.disabled = true;
           this.ui.searchInput.value = item.Name;
           this.ui.confirmBtn.classList.add("show");
+          this.telegram.hideKeyboard();
 
           const targetLatLng = [item.Latitude, item.Longitude];
           this.map.setView(targetLatLng, this.config.maxZoom);
           this.setPin(targetLatLng);
           this.resetSearchUI();
+        }
+
+        expandTelegram() {
+          if (window.Telegram?.WebApp) {
+            this.telegram = window.Telegram.WebApp;
+            this.telegram.expand();
+            this.telegram.disableVerticalSwipes();
+          }
         }
       }
       document.addEventListener("DOMContentLoaded", () => {
