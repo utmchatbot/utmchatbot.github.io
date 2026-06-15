@@ -648,7 +648,7 @@
                   this.shake(this.ui.confirmBtn);
                   return;
                 }
-                const latlng = [lat, lng];
+                const latlng = [loc.latitude, loc.longitude];
                 this.state.originSelection = true;
                 this.placeMarker("origin", latlng);
                 this.map.setView(latlng, this.config.maxZoom);
