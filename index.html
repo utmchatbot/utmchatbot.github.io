@@ -250,18 +250,6 @@
         }
       }
 
-      /**
-       * MapApp — owns the map, the two SearchBoxes, the markers, the route
-       * layer, the Telegram bridge, and a 3-mode confirm-button state machine:
-       *
-       *   destination -> confirmDestination()   ("Confirm destination")
-       *   locate      -> useCurrentLocation()   ("Use my current location")
-       *   origin      -> confirmOrigin()        ("Confirm starting point")
-       *
-       * Flow: pick destination -> confirm -> find-bar appears -> pick/locate
-       * the origin -> two pins fit on screen -> confirm starting point ->
-       * OSRM route drawn -> bounds fit to the whole path -> sent to Telegram.
-       */
       class MapApp {
         constructor() {
           this.destination = null;
@@ -662,7 +650,7 @@
                 }
                 this.icon.classList.add("hide");
                 this.clearBtn.classList.add("show");
-                this.setConfirmMode("locate", "Suggest name");
+                this.setConfirmMode("origin", "Suggest name");
                 this.placeMarker("origin", [loc.latitude, loc.longitude]);
               });
             };
