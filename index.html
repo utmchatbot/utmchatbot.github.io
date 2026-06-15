@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <title>UTM Thrive</title>
@@ -182,7 +182,7 @@
         }
         bindEvents() {
           this.map.on("click", (e) => this.handleMapClick(e));
-          this.map.on("movestart", () => this.handleMapMoveStart());
+          this.map.on("dragstart", () => this.handleMapDragStart());
           this.map.on("moveend", () => this.handleMapMoveEnd());
           this.ui.searchInput.addEventListener(
             "input",
@@ -217,8 +217,8 @@
           this.setPin(e.latlng);
         }
 
-        handleMapMoveStart() {
-          if (this.state.currentMarker && !this.state.isSelection) {
+        handleMapDragStart() {
+          if (this.state.currentMarker) {
             this.map.removeLayer(this.state.currentMarker);
             this.ui.centerPin.classList.add("show", "animating");
           }
@@ -228,7 +228,10 @@
         handleMapMoveEnd() {
           if (this.state.isSelection) {
             this.state.isSelection = false;
-          } else if (this.state.currentMarker) {
+          } else if (
+            this.state.currentMarker &&
+            this.ui.centerPin.classList.contains("show")
+          ) {
             this.setPin(this.map.getCenter());
             this.ui.searchInput.placeholder = "Name this location";
             this.ui.confirmBtn.innerText = "Suggest name";
@@ -373,6 +376,7 @@
 
         handleLocationSelect(item) {
           this.state.isSelection = true;
+          this.ui.searchInput.input.blur();
           this.ui.searchInput.disabled = true;
           this.ui.searchInput.value = item.Name;
           this.ui.confirmBtn.classList.add("show");
