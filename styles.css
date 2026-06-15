@@ -61,6 +61,7 @@ html {
 }
 
 .search-bar {
+  --bar-y: -54px;
   display: flex;
   gap: 14px;
   width: 100%;
@@ -73,7 +74,7 @@ html {
   border: 1px solid rgba(255, 255, 255, 0.9);
   -webkit-backdrop-filter: blur(5px) saturate(200%);
   backdrop-filter: blur(5px) saturate(200%);
-  transform: translateY(-54px);
+  transform: translateY(var(--bar-y));
   box-shadow:
     0 1px 10px rgba(0, 0, 0, 0.1),
     0 1px 1px rgba(0, 0, 0, 0.1),
@@ -91,7 +92,7 @@ html {
   box-shadow:
     0 1px 10px rgba(0, 0, 0, 0.2),
     inset 0 1px 1px rgba(255, 255, 255, 0.6);
-  transform: translateY(-54px) scale(1.01);
+  transform: translateY(var(--bar-y)) scale(1.01);
 }
 
 .search-bar.error {
@@ -103,21 +104,21 @@ html {
 }
 
 #find-bar {
-  transform: translateY(0);
+  --bar-y: 0px;
+  transform: translateY(var(--bar-y));
   pointer-events: none;
   visibility: hidden;
   opacity: 0;
 }
 
 #find-bar.show {
+  --bar-y: 66px;
   opacity: 1;
-  transform: translateY(66px);
+  transform: translateY(var(--bar-y));
   visibility: visible;
   pointer-events: auto;
 }
 
-/* Scoped to UI chrome only. A global `svg` rule would shrink Leaflet's
-   route-overlay SVG (the OSRM GeoJSON line) to 20x20 and break rendering. */
 .ui svg {
   width: 20px;
   height: 20px;
@@ -228,7 +229,7 @@ html {
   z-index: 2;
 }
 
-.search-text.error::placeholder {
+.search-bar.error .search-text::placeholder {
   color: #d32f2f;
   opacity: 0.8;
 }
@@ -263,8 +264,6 @@ html {
   transform: translateY(14px);
 }
 
-/* When the origin (find) bar is the active field it sits 66px lower, so the
-   shared dropdown drops with it to keep the same 14px gap beneath the bar. */
 #suggestions.origin.show {
   transform: translateY(80px);
 }
@@ -412,15 +411,15 @@ html {
 @keyframes shake {
   0%,
   100% {
-    transform: translateX(0);
+    transform: translateY(var(--bar-y, 0px)) translateX(0);
   }
   20%,
   60% {
-    transform: translateX(-6px);
+    transform: translateY(var(--bar-y, 0px)) translateX(-6px);
   }
   40%,
   80% {
-    transform: translateX(6px);
+    transform: translateY(var(--bar-y, 0px)) translateX(6px);
   }
 }
 
@@ -431,4 +430,114 @@ html {
   100% {
     transform: translateY(-14px);
   }
+}
+
+.route-base {
+  stroke-dasharray: 8000;
+  stroke-dashoffset: 8000;
+  animation: drawRoute 5s ease-out forwards;
+  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.4));
+}
+
+@keyframes drawRoute {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.route-flow-overlay {
+  stroke-dasharray: 8 12;
+  opacity: 0;
+  animation:
+    fadeInFlow 0.4s ease forwards 1.3s,
+    flowRoute 0.8s linear infinite 1.3s;
+}
+
+@keyframes fadeInFlow {
+  to {
+    opacity: 0.9;
+  }
+}
+
+@keyframes flowRoute {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+#schedule {
+  position: absolute;
+  bottom: 80px;
+  width: 100%;
+  display: flex;
+  gap: 12px;
+  box-sizing: border-box;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(20px);
+  z-index: 5;
+  transition:
+    opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#schedule.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.sched-field {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 99px;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1d1d1f;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.85);
+  -webkit-backdrop-filter: blur(20px) saturate(200%);
+  backdrop-filter: blur(20px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  transition:
+    background 0.2s,
+    transform 0.15s;
+}
+
+.sched-field:active {
+  transform: scale(0.98);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.sched-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.sched-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sched-native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  opacity: 0;
+  cursor: pointer;
 }
