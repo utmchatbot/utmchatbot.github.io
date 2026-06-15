@@ -64,7 +64,7 @@ html {
   position: relative;
 }
 
-#search-bar {
+.search-bar {
   display: flex;
   gap: 14px;
   width: 100%;
@@ -77,6 +77,7 @@ html {
   border: 1px solid rgba(255, 255, 255, 0.9);
   -webkit-backdrop-filter: blur(5px) saturate(200%);
   backdrop-filter: blur(5px) saturate(200%);
+  transform: translateY(-54px);
   box-shadow:
     0 1px 10px rgba(0, 0, 0, 0.1),
     0 1px 1px rgba(0, 0, 0, 0.1),
@@ -84,23 +85,39 @@ html {
   transition:
     background ease-in-out 0.3s,
     box-shadow 0.3s,
-    transform 0.3s;
+    visibility 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-#search-bar:focus-within {
+.search-bar:focus-within {
   background: rgba(255, 255, 255, 1);
   box-shadow:
     0 1px 10px rgba(0, 0, 0, 0.2),
     inset 0 1px 1px rgba(255, 255, 255, 0.6);
-  transform: scale(1.01);
+  transform: translateY(-54px) scale(1.01);
 }
 
-#search-bar.error {
+.search-bar.error {
   animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
   border-color: rgba(255, 59, 48, 0.5);
   box-shadow:
     0 4px 30px rgba(255, 59, 48, 0.15),
     inset 0 1px 1px rgba(255, 255, 255, 0.6);
+}
+
+#find-bar {
+  transform: translateY(0);
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+}
+
+#find-bar.show {
+  opacity: 1;
+  transform: translateY(66px);
+  visibility: visible;
+  pointer-events: auto;
 }
 
 svg {
@@ -114,6 +131,66 @@ svg {
   stroke-linejoin: round;
 }
 
+#gps-icon {
+  font-size: 18px;
+  font-weight: 600;
+  transform: translate(1px);
+  color: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.action {
+  display: grid;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+}
+
+.clear,
+.search-icon {
+  grid-area: 1 / 1;
+}
+
+.search-icon.hide {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.clear {
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 50%;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 0.7rem;
+  font-weight: bolder;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s,
+    background 0.2s,
+    visibility 0.2s;
+}
+
+.clear:hover {
+  background: rgba(0, 0, 0, 0.15);
+  color: #000;
+}
+
+.clear.show {
+  opacity: 1;
+  visibility: visible;
+}
+
 .input {
   display: flex;
   align-items: center;
@@ -121,7 +198,7 @@ svg {
   flex: 1;
 }
 
-#search-to,
+.search-text,
 #search-hint {
   font-size: 1.05rem;
   font-family: inherit;
@@ -147,7 +224,7 @@ svg {
   pointer-events: none;
 }
 
-#search-to {
+.search-text {
   position: relative;
   color: #1d1d1f;
   z-index: 2;
@@ -156,54 +233,6 @@ svg {
 #search-to.error::placeholder {
   color: #d32f2f;
   opacity: 0.8;
-}
-
-.action {
-  display: grid;
-  align-items: center;
-  width: 24px;
-  height: 24px;
-}
-
-#clear,
-#search-icon {
-  grid-area: 1 / 1;
-}
-
-#search-icon.hide {
-  opacity: 0;
-  visibility: hidden;
-}
-
-#clear {
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.1);
-  border: none;
-  border-radius: 50%;
-  color: rgba(0, 0, 0, 0.5);
-  font-size: 0.7rem;
-  font-weight: bolder;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity 0.2s,
-    background 0.2s,
-    visibility 0.2s;
-}
-
-#clear:hover {
-  background: rgba(0, 0, 0, 0.15);
-  color: #000;
-}
-
-#clear.show {
-  opacity: 1;
-  visibility: visible;
 }
 
 #suggestions {
@@ -319,9 +348,9 @@ svg {
   position: absolute;
   bottom: 15px;
   width: 100%;
-  box-sizing: border-box;
   padding: 16px;
   border-radius: 99px;
+  box-sizing: border-box;
   background: rgba(255, 255, 255, 0.85);
   -webkit-backdrop-filter: blur(20px) saturate(200%);
   backdrop-filter: blur(20px) saturate(200%);
@@ -337,8 +366,9 @@ svg {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 5;
   pointer-events: none;
+  gap: 10px;
+  z-index: 5;
   opacity: 0;
   transform: translateY(30px);
   transition:
@@ -353,9 +383,18 @@ svg {
   transform: translateY(0);
 }
 
+#confirm svg {
+  transform: translateY(1px);
+}
+
 #confirm:active {
   transform: translateY(2px) scale(0.98);
   background: rgba(255, 255, 255, 0.95);
+  color: #007bff;
+}
+
+#confirm:active svg {
+  stroke: #007bff;
 }
 
 .leaflet-bottom {
