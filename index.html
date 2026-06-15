@@ -638,10 +638,6 @@
           const lm = this.telegram?.LocationManager;
           if (lm) {
             const request = () => {
-              if (!lm.isLocationAvailable) {
-                this.shake(this.ui.confirmBtn);
-                return;
-              }
               lm.getLocation((loc) => {
                 if (!loc) {
                   lm.openSettings?.();
