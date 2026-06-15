@@ -654,7 +654,8 @@
                 this.map.setView(latlng, this.config.maxZoom);
                 this.originBox.icon.classList.add("hide");
                 this.originBox.clearBtn.classList.add("show");
-                this.ui.confirmBtn.classList.add("show");
+                this.originBox.input.placeholder = "Name this location";
+                this.originBox.input.value = "";
                 this.setConfirmMode("origin", "Suggest name");
               });
             };
