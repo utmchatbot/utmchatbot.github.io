@@ -648,10 +648,14 @@
                   this.shake(this.ui.confirmBtn);
                   return;
                 }
-                this.icon.classList.add("hide");
-                this.clearBtn.classList.add("show");
+                const latlng = [lat, lng];
+                this.state.originSelection = true;
+                this.placeMarker("origin", latlng);
+                this.map.setView(latlng, this.config.maxZoom);
+                this.originBox.icon.classList.add("hide");
+                this.originBox.clearBtn.classList.add("show");
+                this.ui.confirmBtn.classList.add("show");
                 this.setConfirmMode("origin", "Suggest name");
-                this.placeMarker("origin", [loc.latitude, loc.longitude]);
               });
             };
             if (!lm.isInited) {
