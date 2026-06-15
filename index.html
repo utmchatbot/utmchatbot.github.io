@@ -26,7 +26,7 @@
         <div id="find-bar" class="search-bar">
           <div id="gps-icon">𖦏</div>
           <div class="input">
-            <div id="find-hint"></div>
+            <div id="find-hint" class="hint"></div>
             <input
               type="text"
               id="search-from"
@@ -54,7 +54,7 @@
             <circle cx="12" cy="10" r="3"></circle>
           </svg>
           <div class="input">
-            <div id="search-hint"></div>
+            <div id="search-hint" class="hint"></div>
             <input
               type="text"
               id="search-to"
@@ -89,27 +89,225 @@
         },
       };
 
+      /**
+       * SearchBox — one self-contained search field.
+       *
+       * Encapsulates every behaviour that the original destination bar had:
+       * input filtering, the autofill ghost hint, Tab-to-accept, the
+       * clear/search-icon swap, and the dropdown render. MapApp owns two of
+       * these (destination + origin) and wires their differences through
+       * options instead of duplicating the logic.
+       *
+       * Options:
+       *   name        "destination" | "origin"  (drives shared-dropdown offset)
+       *   bar/input/icon/hint/clearBtn/dropdown   DOM nodes
+       *   getData()   returns the searchable dataset
+       *   placeholder default placeholder restored on reset
+       *   canSuggest() gate: when false, typing shows no suggestions
+       *   onSelect(item) called after a dropdown pick (locking is automatic)
+       *   onClear()   called after the clear button resets this box
+       */
+      class SearchBox {
+        constructor(opts) {
+          this.name = opts.name;
+          this.bar = opts.bar;
+          this.input = opts.input;
+          this.icon = opts.icon;
+          this.hint = opts.hint;
+          this.clearBtn = opts.clearBtn;
+          this.dropdown = opts.dropdown;
+          this.getData = opts.getData;
+          this.placeholder = opts.placeholder;
+          this.canSuggest = opts.canSuggest || (() => true);
+          this.onSelect = opts.onSelect || (() => {});
+          this.onClear = opts.onClear || (() => {});
+          this.activeAutofill = "";
+          this.bindEvents();
+        }
+
+        get value() {
+          return this.input.value.trim();
+        }
+
+        bindEvents() {
+          this.input.addEventListener(
+            "input",
+            Utils.debounce((e) => this.handleInput(e.target.value), 200),
+          );
+          this.input.addEventListener("keydown", (e) => this.handleKeydown(e));
+          this.clearBtn.addEventListener("click", () => this.clear());
+        }
+
+        handleInput(value) {
+          this.icon.classList.add("hide");
+          this.clearBtn.classList.add("show");
+          this.renderSuggestions(value);
+        }
+
+        renderSuggestions(value) {
+          const q = value.trim().toLowerCase();
+          this.dropdown.innerHTML = "";
+
+          if (!this.canSuggest() || q === "") {
+            this.closeDropdown();
+            return;
+          }
+
+          const rx = new RegExp(`\\b${Utils.escapeRegex(q)}`, "i");
+          const filtered = this.getData()
+            .filter(
+              (b) =>
+                rx.test(b.Name.toLowerCase()) || rx.test(b.Area.toLowerCase()),
+            )
+            .slice(0, 10);
+
+          if (filtered.length === 0) {
+            this.closeDropdown();
+            return;
+          }
+
+          filtered.forEach((item) => {
+            const row = document.createElement("div");
+            row.className = "dropdown-item";
+            const statusClass = item.Status.toLowerCase().replace(/\s+/g, "-");
+            row.innerHTML = `<div class="item-info">
+                <div class="item-name">${item.Name}</div>
+                <div class="item-area">${item.Area}</div>
+              </div>
+              <div class="status-badge ${statusClass}">${item.Status}</div>`;
+            row.addEventListener("click", () => this.select(item));
+            this.dropdown.appendChild(row);
+          });
+
+          this.openDropdown();
+
+          const top = filtered[0];
+          if (top.Name.toLowerCase().startsWith(q)) {
+            this.hint.textContent = this.input.value + top.Name.slice(q.length);
+            this.activeAutofill = top.Name;
+          } else {
+            this.hint.textContent = "";
+            this.activeAutofill = "";
+          }
+        }
+
+        openDropdown() {
+          // The two bars share one #suggestions element. The `origin` class
+          // pushes it 80px down so it sits under the find-bar when active.
+          this.dropdown.classList.toggle("origin", this.name === "origin");
+          this.dropdown.classList.add("show");
+        }
+
+        closeDropdown() {
+          this.dropdown.classList.remove("show");
+          this.hint.textContent = "";
+          this.activeAutofill = "";
+        }
+
+        handleKeydown(e) {
+          if (e.key === "Tab" && this.activeAutofill) {
+            e.preventDefault();
+            this.input.value = this.activeAutofill;
+            this.hint.textContent = "";
+            this.handleInput(this.input.value);
+          }
+        }
+
+        select(item) {
+          this.input.blur();
+          this.input.value = item.Name;
+          this.input.disabled = true;
+          this.icon.classList.add("hide");
+          this.clearBtn.classList.add("show");
+          this.closeDropdown();
+          this.onSelect(item);
+        }
+
+        // Lock the box to a free-text label (used for "Current location").
+        lock(label) {
+          this.input.value = label;
+          this.input.disabled = true;
+          this.icon.classList.add("hide");
+          this.clearBtn.classList.add("show");
+          this.closeDropdown();
+        }
+
+        disable() {
+          this.input.disabled = true;
+        }
+
+        // Silent restore to the empty/default state — no onClear callback.
+        reset() {
+          this.input.value = "";
+          this.input.disabled = false;
+          this.input.placeholder = this.placeholder;
+          this.input.style.cursor = "";
+          this.icon.classList.remove("hide");
+          this.clearBtn.classList.remove("show");
+          this.closeDropdown();
+        }
+
+        // User-initiated clear: reset + notify the owner.
+        clear() {
+          this.reset();
+          this.onClear();
+        }
+      }
+
+      /**
+       * MapApp — owns the map, the two SearchBoxes, the markers, the route
+       * layer, the Telegram bridge, and a 3-mode confirm-button state machine:
+       *
+       *   destination -> confirmDestination()   ("Confirm destination")
+       *   locate      -> useCurrentLocation()   ("Use my current location")
+       *   origin      -> confirmOrigin()        ("Confirm starting point")
+       *
+       * Flow: pick destination -> confirm -> find-bar appears -> pick/locate
+       * the origin -> two pins fit on screen -> confirm starting point ->
+       * OSRM route drawn -> bounds fit to the whole path -> sent to Telegram.
+       */
       class MapApp {
         constructor() {
-          this.destination;
-          this.from;
-          this.telegram;
+          this.destination = null;
+          this.origin = null;
+          this.telegram = null;
+          this.confirmMode = "destination";
+          this.markers = { destination: null, origin: null };
+          this.routeLayer = null;
           this.state = {
             buildingsData: [],
-            activeAutofillValue: "",
-            currentMarker: null,
-            isSelection: false,
+            destSelection: false,
           };
           this.ui = {
-            clearBtn: document.getElementById("clear"),
-            confirmBtn: document.getElementById("confirm"),
-            centerPin: document.getElementById("center-pin"),
             searchBar: document.getElementById("search-bar"),
             searchInput: document.getElementById("search-to"),
             searchIcon: document.getElementById("search-icon"),
             searchHint: document.getElementById("search-hint"),
-            dropdownMenu: document.getElementById("suggestions"),
+            clearBtn: document.getElementById("clear"),
             findBar: document.getElementById("find-bar"),
+            findInput: document.getElementById("search-from"),
+            findIcon: document.getElementById("find-icon"),
+            findHint: document.getElementById("find-hint"),
+            findClearBtn: document.getElementById("clears"),
+            dropdownMenu: document.getElementById("suggestions"),
+            confirmBtn: document.getElementById("confirm"),
+            centerPin: document.getElementById("center-pin"),
+          };
+          this.confirmModes = {
+            destination: {
+              html: "Confirm destination",
+              action: () => this.confirmDestination(),
+            },
+            locate: {
+              html: `<svg viewBox="0 0 24 24">
+                <polygon points="12 13 5 12 19 5 14 19"></polygon>
+              </svg><span>Use my current location</span>`,
+              action: () => this.useCurrentLocation(),
+            },
+            origin: {
+              html: "Confirm starting point",
+              action: () => this.confirmOrigin(),
+            },
           };
           this.config = {
             defaultCenter: [1.56, 103.638],
@@ -117,12 +315,15 @@
             maxZoom: 18,
           };
         }
+
         async init() {
           this.fixLeafletIcons();
           this.initMap();
+          this.setupSearch();
           this.bindEvents();
           await this.loadData();
           this.expandTelegram();
+          this.setConfirmMode("destination");
         }
 
         fixLeafletIcons() {
@@ -166,226 +367,336 @@
             });
         }
 
+        setupSearch() {
+          this.destBox = new SearchBox({
+            name: "destination",
+            bar: this.ui.searchBar,
+            input: this.ui.searchInput,
+            icon: this.ui.searchIcon,
+            hint: this.ui.searchHint,
+            clearBtn: this.ui.clearBtn,
+            dropdown: this.ui.dropdownMenu,
+            placeholder: "Search your destination",
+            getData: () => this.state.buildingsData,
+            // Once a destination pin exists we're in free-text "name this
+            // location" mode, so suggestions are suppressed.
+            canSuggest: () => !this.markers.destination,
+            onSelect: (item) => this.handleDestinationSelect(item),
+            onClear: () => this.handleDestinationClear(),
+          });
+
+          this.originBox = new SearchBox({
+            name: "origin",
+            bar: this.ui.findBar,
+            input: this.ui.findInput,
+            icon: this.ui.findIcon,
+            hint: this.ui.findHint,
+            clearBtn: this.ui.findClearBtn,
+            dropdown: this.ui.dropdownMenu,
+            placeholder: "Find your starting point",
+            getData: () => this.state.buildingsData,
+            canSuggest: () => true,
+            onSelect: (item) => this.handleOriginSelect(item),
+            onClear: () => this.handleOriginClear(),
+          });
+        }
+
         async loadData() {
-          this.ui.searchInput.disabled = true;
-          this.ui.searchInput.placeholder = "Loading map data...";
+          this.destBox.input.disabled = true;
+          this.destBox.input.placeholder = "Loading map data...";
           try {
             const response = await fetch("./buildings.json");
             this.state.buildingsData = await response.json();
-
-            this.ui.searchInput.disabled = false;
-            this.ui.searchInput.placeholder = "Search your destination";
+            this.destBox.input.disabled = false;
+            this.destBox.input.placeholder = "Search your destination";
           } catch (error) {
             console.error("Error loading building data:", error);
-            this.ui.searchInput.placeholder = "Error loading data";
+            this.destBox.input.placeholder = "Error loading data";
           }
         }
+
         bindEvents() {
           this.map.on("click", (e) => this.handleMapClick(e));
           this.map.on("dragstart", () => this.handleMapDragStart());
           this.map.on("moveend", () => this.handleMapMoveEnd());
-          this.ui.searchInput.addEventListener(
-            "input",
-            Utils.debounce((e) => this.handleSearchInput(e.target.value), 200),
-          );
-          this.ui.searchInput.addEventListener("keydown", (e) =>
-            this.handleKeydown(e),
-          );
-          this.ui.clearBtn.addEventListener("click", () => this.clearSearch());
           this.ui.confirmBtn.addEventListener("click", () =>
-            this.confirmDestination(),
+            this.handleConfirm(),
           );
         }
 
-        setPin(loc) {
-          if (this.state.currentMarker) {
-            this.state.currentMarker.setLatLng(loc).addTo(this.map);
+        /* ---------- markers / route / view helpers ---------- */
+
+        placeMarker(which, latlng) {
+          if (this.markers[which]) {
+            this.markers[which].setLatLng(latlng).addTo(this.map);
           } else {
-            this.state.currentMarker = L.marker(loc).addTo(this.map);
+            this.markers[which] = L.marker(latlng).addTo(this.map);
           }
           this.ui.centerPin.classList.remove("show", "animating");
         }
 
-        resetSearchUI() {
-          this.ui.dropdownMenu.classList.remove("show");
-          this.ui.searchHint.textContent = "";
-          this.state.activeAutofillValue = "";
+        removeMarker(which) {
+          if (this.markers[which]) {
+            this.map.removeLayer(this.markers[which]);
+            this.markers[which] = null;
+          }
         }
 
+        drawRoute(geojson) {
+          this.removeRoute();
+          this.routeLayer = L.geoJSON(geojson, {
+            style: { color: "#007bff", weight: 5, opacity: 0.85 },
+          }).addTo(this.map);
+        }
+
+        removeRoute() {
+          if (this.routeLayer) {
+            this.map.removeLayer(this.routeLayer);
+            this.routeLayer = null;
+          }
+        }
+
+        fitToPins() {
+          const pts = [];
+          if (this.markers.destination)
+            pts.push(this.markers.destination.getLatLng());
+          if (this.markers.origin) pts.push(this.markers.origin.getLatLng());
+          if (pts.length === 0) return;
+          if (pts.length === 1) {
+            this.map.setView(pts[0], this.config.maxZoom);
+            return;
+          }
+          this.map.flyToBounds(L.latLngBounds(pts), { padding: [80, 80] });
+        }
+
+        shake(...els) {
+          els.forEach((el) => {
+            el.classList.add("error");
+            setTimeout(() => el.classList.remove("error"), 400);
+          });
+        }
+
+        /* ---------- confirm-button state machine ---------- */
+
+        setConfirmMode(mode, labelOverride) {
+          this.confirmMode = mode;
+          this.ui.confirmBtn.innerHTML =
+            labelOverride ?? this.confirmModes[mode].html;
+        }
+
+        handleConfirm() {
+          this.confirmModes[this.confirmMode]?.action();
+        }
+
+        /* ---------- phase A: destination map interactions ---------- */
+
         handleMapClick(e) {
+          if (this.destination) return; // locked once destination confirmed
           this.map.setView(e.latlng, this.config.maxZoom);
-          this.setPin(e.latlng);
+          this.placeMarker("destination", e.latlng);
         }
 
         handleMapDragStart() {
-          if (this.state.currentMarker) {
-            this.map.removeLayer(this.state.currentMarker);
+          if (this.destination) return;
+          if (this.markers.destination) {
+            // Lift the pin visually but keep the reference so moveend can
+            // re-drop it at the new map centre (the float animation).
+            this.map.removeLayer(this.markers.destination);
             this.ui.centerPin.classList.add("show", "animating");
           }
-          this.resetSearchUI();
+          this.destBox.closeDropdown();
         }
 
         handleMapMoveEnd() {
-          if (this.state.isSelection) {
-            this.state.isSelection = false;
-          } else if (
-            this.state.currentMarker &&
+          if (this.destination) return;
+          if (this.state.destSelection) {
+            this.state.destSelection = false; // consume programmatic move
+            return;
+          }
+          if (
+            this.markers.destination &&
             this.ui.centerPin.classList.contains("show")
           ) {
-            this.setPin(this.map.getCenter());
-            this.ui.searchInput.placeholder = "Name this location";
-            this.ui.confirmBtn.innerText = "Suggest name";
-            this.ui.searchInput.style.cursor = "default";
-            this.ui.searchInput.disabled = false;
-            this.ui.searchInput.value = "";
-            this.ui.searchIcon.classList.add("hide");
-            this.ui.clearBtn.classList.add("show");
+            this.placeMarker("destination", this.map.getCenter());
+            this.destBox.input.placeholder = "Name this location";
+            this.destBox.input.style.cursor = "default";
+            this.destBox.input.disabled = false;
+            this.destBox.input.value = "";
+            this.destBox.icon.classList.add("hide");
+            this.destBox.clearBtn.classList.add("show");
+            this.setConfirmMode("destination", "Suggest name");
             this.ui.confirmBtn.classList.add("show");
           }
         }
 
-        handleKeydown(e) {
-          if (e.key === "Tab" && this.state.activeAutofillValue) {
-            e.preventDefault();
-            this.ui.searchInput.value = this.state.activeAutofillValue;
-            this.ui.searchHint.textContent = "";
-            this.handleSearchInput(this.ui.searchInput.value);
-          }
-        }
-
-        clearSearch() {
-          this.resetSearchUI();
-          this.state.isSelection = false;
-          this.ui.searchInput.value = "";
-          this.ui.searchInput.disabled = false;
-          this.ui.searchInput.placeholder = "Search your destination";
-
-          if (this.state.currentMarker) {
-            this.map.removeLayer(this.state.currentMarker);
-            this.state.currentMarker = null;
-          }
-
-          this.ui.clearBtn.classList.remove("show");
-          this.ui.searchIcon.classList.remove("hide");
-          this.ui.confirmBtn.classList.remove("show");
-          this.ui.findBar.classList.remove("show");
-
-          setTimeout(() => {
-            this.ui.confirmBtn.innerText = "Confirm destination";
-          }, 400);
+        handleDestinationSelect(item) {
+          this.state.destSelection = true; // skip the upcoming moveend
+          const latlng = [item.Latitude, item.Longitude];
+          this.map.setView(latlng, this.config.maxZoom);
+          this.placeMarker("destination", latlng);
+          this.telegram?.hideKeyboard?.();
+          this.setConfirmMode("destination");
+          this.ui.confirmBtn.classList.add("show");
         }
 
         confirmDestination() {
-          if (this.ui.searchInput.value === "") {
-            this.ui.searchBar.classList.add("error");
-            this.ui.searchInput.classList.add("error");
-
-            setTimeout(() => {
-              this.ui.searchBar.classList.remove("error");
-              this.ui.searchInput.classList.remove("error");
-            }, 400);
-
-            this.ui.searchInput.focus();
-          } else {
-            this.destination = {
-              name: this.ui.searchInput.value,
-              lat: location.lat,
-              lng: location.lng,
-            };
-
-            this.ui.confirmBtn.innerHTML = `
-            <svg viewBox="0 0 24 24">
-              <polygon points="12 13 5 12 19 5 14 19"></polygon>
-            </svg>
-            </span>Use my current location</span>`;
-            this.ui.searchInput.disabled = true;
-            this.ui.findBar.classList.add("show");
+          if (!this.destBox.value || !this.markers.destination) {
+            this.shake(this.ui.searchBar, this.destBox.input);
+            this.destBox.input.focus();
+            return;
           }
-          // if (this.telegram) {
-          //   const location = this.map.getCenter();
-          //   this.telegram.sendData(
-          //     JSON.stringify({
-          //       // name: this.ui.searchInput.value,
-          //       lat: location.lat,
-          //       lng: location.lng,
-          //     }),
-          //   );
-          // }
-        }
-
-        handleSearchInput(value) {
-          const normalizedValue = value.trim().toLowerCase();
-          this.ui.searchIcon.classList.add("hide");
-          this.ui.clearBtn.classList.add("show");
-          this.ui.dropdownMenu.innerHTML = "";
-
-          if (!this.state.currentMarker || this.state.isSelection) {
-            const searchRegex = new RegExp(
-              `\\b${Utils.escapeRegex(normalizedValue)}`,
-              "i",
-            );
-
-            const filtered = this.state.buildingsData
-              .filter(
-                (b) =>
-                  searchRegex.test(b.Name.toLowerCase()) ||
-                  searchRegex.test(b.Area.toLowerCase()),
-              )
-              .slice(0, 10);
-
-            if (filtered.length === 0 || normalizedValue === "") {
-              this.ui.dropdownMenu.classList.remove("show");
-              this.ui.searchHint.textContent = "";
-              this.state.activeAutofillValue = "";
-              return;
-            }
-
-            filtered.forEach((item) => {
-              const row = document.createElement("div");
-              row.className = "dropdown-item";
-              const statusClass = item.Status.toLowerCase().replace(
-                /\s+/g,
-                "-",
-              );
-
-              row.innerHTML = `<div class="item-info">
-                  <div class="item-name">${item.Name}</div>
-                  <div class="item-area">${item.Area}</div>
-                </div>
-                <div class="status-badge ${statusClass}">${item.Status}</div>`;
-
-              row.addEventListener("click", () =>
-                this.handleLocationSelect(item),
-              );
-              this.ui.dropdownMenu.appendChild(row);
-            });
-
-            this.ui.dropdownMenu.classList.add("show");
-            const match = filtered[0];
-            if (match.Name.toLowerCase().startsWith(normalizedValue)) {
-              this.ui.searchHint.textContent =
-                this.ui.searchInput.value +
-                match.Name.slice(normalizedValue.length);
-              this.state.activeAutofillValue = match.Name;
-            } else {
-              this.ui.searchHint.textContent = "";
-              this.state.activeAutofillValue = "";
-            }
-          }
-        }
-
-        handleLocationSelect(item) {
-          this.state.isSelection = true;
-          this.ui.searchInput.blur();
-          this.ui.searchInput.disabled = true;
-          this.ui.searchInput.value = item.Name;
+          const ll = this.markers.destination.getLatLng();
+          this.destination = {
+            name: this.destBox.value,
+            lat: ll.lat,
+            lng: ll.lng,
+          };
+          this.destBox.disable();
+          this.destBox.closeDropdown();
+          this.ui.findBar.classList.add("show");
+          this.setConfirmMode("locate");
           this.ui.confirmBtn.classList.add("show");
-          this.telegram.hideKeyboard();
+        }
 
-          const targetLatLng = [item.Latitude, item.Longitude];
-          this.map.setView(targetLatLng, this.config.maxZoom);
-          this.setPin(targetLatLng);
-          this.resetSearchUI();
+        // Clearing the destination tears the whole flow down (origin too).
+        handleDestinationClear() {
+          this.destination = null;
+          this.origin = null;
+          this.removeMarker("destination");
+          this.removeMarker("origin");
+          this.removeRoute();
+          this.state.destSelection = false;
+          this.originBox.reset();
+          this.ui.findBar.classList.remove("show");
+          this.ui.confirmBtn.classList.remove("show");
+          this.map.flyTo(this.config.defaultCenter, this.config.defaultZoom);
+          setTimeout(() => this.setConfirmMode("destination"), 400);
+        }
+
+        /* ---------- phase B: origin selection + routing ---------- */
+
+        handleOriginSelect(item) {
+          this.setOrigin(
+            { name: item.Name, lat: item.Latitude, lng: item.Longitude },
+            [item.Latitude, item.Longitude],
+          );
+        }
+
+        // Clearing the origin keeps the destination; only resets to locate.
+        handleOriginClear() {
+          this.origin = null;
+          this.removeMarker("origin");
+          this.removeRoute();
+          this.state.destSelection = false;
+          if (this.markers.destination) {
+            this.map.flyTo(
+              this.markers.destination.getLatLng(),
+              this.config.maxZoom,
+            );
+          }
+          this.setConfirmMode("locate");
+        }
+
+        setOrigin(origin, latlng) {
+          this.origin = origin;
+          this.placeMarker("origin", latlng);
+          this.removeRoute();
+          this.fitToPins();
+          this.setConfirmMode("origin");
+          this.ui.confirmBtn.classList.add("show");
+        }
+
+        useCurrentLocation() {
+          const lm = this.telegram?.LocationManager;
+          if (lm) {
+            const request = () => {
+              if (!lm.isLocationAvailable) {
+                this.shake(this.ui.confirmBtn);
+                return;
+              }
+              lm.getLocation((loc) => {
+                if (!loc) {
+                  lm.openSettings?.();
+                  this.shake(this.ui.confirmBtn);
+                  return;
+                }
+                this.acceptLocation(loc.latitude, loc.longitude);
+              });
+            };
+            if (!lm.isInited) {
+              lm.init(() => request());
+            } else {
+              request();
+            }
+            return;
+          }
+
+          // Dev fallback when running outside Telegram.
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              (pos) =>
+                this.acceptLocation(pos.coords.latitude, pos.coords.longitude),
+              () => this.shake(this.ui.confirmBtn),
+            );
+          } else {
+            this.shake(this.ui.confirmBtn);
+          }
+        }
+
+        acceptLocation(lat, lng) {
+          this.originBox.lock("Current location");
+          this.setOrigin({ name: "Current location", lat, lng }, [lat, lng]);
+        }
+
+        async confirmOrigin() {
+          if (!this.origin || !this.destination) {
+            this.shake(this.ui.confirmBtn);
+            return;
+          }
+          const o = this.origin;
+          const d = this.destination;
+          // OSRM wants lng,lat order. The public demo server only serves the
+          // "driving" profile; self-host for "foot".
+          const url =
+            "https://router.project-osrm.org/route/v1/driving/" +
+            `${o.lng},${o.lat};${d.lng},${d.lat}` +
+            "?overview=full&geometries=geojson";
+
+          this.ui.confirmBtn.style.pointerEvents = "none";
+          this.ui.confirmBtn.style.opacity = "0.6";
+          try {
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data.code !== "Ok" || !data.routes?.length) {
+              throw new Error("OSRM returned no route");
+            }
+            const route = data.routes[0];
+            this.drawRoute(route.geometry);
+            this.state.destSelection = true;
+            this.map.flyToBounds(this.routeLayer.getBounds(), {
+              padding: [60, 60],
+            });
+            this.sendToTelegram({
+              destination: d,
+              origin: o,
+              distance: Math.round(route.distance),
+              duration: Math.round(route.duration),
+            });
+          } catch (error) {
+            console.error("Routing error:", error);
+            this.shake(this.ui.confirmBtn);
+          } finally {
+            this.ui.confirmBtn.style.pointerEvents = "";
+            this.ui.confirmBtn.style.opacity = "";
+          }
+        }
+
+        // Compact payload only — Telegram caps web_app_data at 4096 bytes, so
+        // we send endpoints + metrics, not the full route geometry.
+        sendToTelegram(payload) {
+          if (this.telegram?.sendData) {
+            this.telegram.sendData(JSON.stringify(payload));
+          }
         }
 
         expandTelegram() {
@@ -396,6 +707,7 @@
           }
         }
       }
+
       document.addEventListener("DOMContentLoaded", () => {
         const app = new MapApp();
         app.init();
