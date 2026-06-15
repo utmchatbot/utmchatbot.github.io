@@ -1,9 +1,5 @@
 body,
 html {
-  /* margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%; */
   overflow: hidden;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
@@ -120,7 +116,9 @@ html {
   pointer-events: auto;
 }
 
-svg {
+/* Scoped to UI chrome only. A global `svg` rule would shrink Leaflet's
+   route-overlay SVG (the OSRM GeoJSON line) to 20x20 and break rendering. */
+.ui svg {
   width: 20px;
   height: 20px;
   fill: none;
@@ -199,7 +197,7 @@ svg {
 }
 
 .search-text,
-#search-hint {
+.hint {
   font-size: 1.05rem;
   font-family: inherit;
   font-weight: 400;
@@ -214,7 +212,7 @@ svg {
   width: 100%;
 }
 
-#search-hint {
+.hint {
   position: absolute;
   z-index: 3;
   left: 0;
@@ -230,7 +228,7 @@ svg {
   z-index: 2;
 }
 
-#search-to.error::placeholder {
+.search-text.error::placeholder {
   color: #d32f2f;
   opacity: 0.8;
 }
@@ -263,6 +261,12 @@ svg {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(14px);
+}
+
+/* When the origin (find) bar is the active field it sits 66px lower, so the
+   shared dropdown drops with it to keep the same 14px gap beneath the bar. */
+#suggestions.origin.show {
+  transform: translateY(80px);
 }
 
 .dropdown-item {
