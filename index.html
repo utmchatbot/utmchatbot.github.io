@@ -513,6 +513,8 @@
             this.placeMarker("destination", e.latlng);
             this.map.setView(e.latlng, this.config.maxZoom);
             this.destBox.input.placeholder = "Name this location";
+            this.destBox.input.disabled = false;
+            this.destBox.input.style.cursor = "";
             this.destBox.input.value = "";
             this.destBox.icon.classList.add("hide");
             this.destBox.clearBtn.classList.add("show");
@@ -522,6 +524,8 @@
             this.placeMarker("origin", e.latlng);
             this.map.setView(e.latlng, this.config.maxZoom);
             this.originBox.input.placeholder = "Name this location";
+            this.originBox.input.disabled = false;
+            this.originBox.input.style.cursor = "";
             this.originBox.input.value = "";
             this.originBox.icon.classList.add("hide");
             this.originBox.clearBtn.classList.add("show");
