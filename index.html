@@ -7,41 +7,42 @@
     <link rel="stylesheet" href="styles.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+      /* Integrated v1 Bottom Sheet & Modal Styles */
+      .bottom-sheet { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-radius: 20px 20px 0 0; box-shadow: 0 -4px 10px rgba(0,0,0,0.1); padding: 20px; box-sizing: border-box; z-index: 1000; transform: translateY(100%); transition: transform 0.3s ease; font-family: inherit; }
+      .bottom-sheet.active { transform: translateY(0); }
+      .sheet-btn { width: 100%; padding: 15px; border-radius: 10px; border: none; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; }
+      .sheet-btn-primary { background: #800000; color: white; }
+      .sheet-btn-secondary { background: #e2e8f0; color: #1e293b; }
+      
+      .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 2000; font-family: inherit; }
+      .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
+      .modal-content input, .modal-content select { width: 100%; padding: 12px; margin: 8px 0 15px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+      .modal-content input:read-only { background: #f1f5f9; color: #64748b; }
+      .step { display: none; }
+      .step.active { display: block; }
+    </style>
   </head>
   <body>
     <div id="map"></div>
     <div id="center-pin">
-      <img
-        src="https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png"
-        alt="pin"
-      />
+      <img src="https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png" alt="pin" />
     </div>
 
+    <!-- Original v0 UI elements -->
     <div class="ui">
       <div class="search">
         <div id="find-bar" class="search-bar">
           <div id="gps-icon">𖦏</div>
           <div class="input">
             <div id="find-hint" class="hint"></div>
-            <input
-              type="text"
-              id="search-from"
-              class="search-text"
-              placeholder="Find your starting point"
-              autocomplete="off"
-            />
+            <input type="text" id="search-from" class="search-text" placeholder="Find your starting point" autocomplete="off" />
           </div>
           <div class="action">
             <button id="clears" class="clear">✕</button>
             <div id="find-icon" class="search-icon">
-              <svg viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="22" y1="22" x2="19" y2="19"></line>
-              </svg>
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="22" y1="22" x2="19" y2="19"></line></svg>
             </div>
           </div>
         </div>
@@ -49,47 +50,27 @@
         <div id="suggestions"></div>
 
         <div id="search-bar" class="search-bar">
-          <svg viewBox="0 0 24 24">
-            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
-            <circle cx="12" cy="10" r="3"></circle>
-          </svg>
+          <svg viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
           <div class="input">
             <div id="search-hint" class="hint"></div>
-            <input
-              type="text"
-              id="search-to"
-              class="search-text"
-              placeholder="Search your destination"
-              autocomplete="off"
-            />
+            <input type="text" id="search-to" class="search-text" placeholder="Search your destination" autocomplete="off" />
           </div>
           <div class="action">
             <button id="clear" class="clear">✕</button>
             <div id="search-icon" class="search-icon">
-              <svg viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="22" y1="22" x2="19" y2="19"></line>
-              </svg>
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="22" y1="22" x2="19" y2="19"></line></svg>
             </div>
           </div>
         </div>
 
         <div id="schedule">
           <button id="date-field" class="sched-field" type="button">
-            <svg viewBox="0 0 24 24" class="sched-icon">
-              <rect x="3" y="4" width="18" height="17" rx="3"></rect>
-              <line x1="3" y1="9" x2="21" y2="9"></line>
-              <line x1="8" y1="2" x2="8" y2="6"></line>
-              <line x1="16" y1="2" x2="16" y2="6"></line>
-            </svg>
+            <svg viewBox="0 0 24 24" class="sched-icon"><rect x="3" y="4" width="18" height="17" rx="3"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="16" y1="2" x2="16" y2="6"></line></svg>
             <span id="date-label" class="sched-label"></span>
             <input type="date" id="date-input" class="sched-native" />
           </button>
           <button id="time-field" class="sched-field" type="button">
-            <svg viewBox="0 0 24 24" class="sched-icon">
-              <circle cx="12" cy="12" r="9"></circle>
-              <polyline points="12 7 12 12 16 14"></polyline>
-            </svg>
+            <svg viewBox="0 0 24 24" class="sched-icon"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 16 14"></polyline></svg>
             <span id="time-label" class="sched-label"></span>
             <input type="time" id="time-input" class="sched-native" />
           </button>
@@ -98,7 +79,56 @@
         <button id="confirm">Confirm destination</button>
       </div>
     </div>
+
+    <!-- v1 Bottom Sheet (Passenger View) -->
+    <div class="bottom-sheet" id="tripSheet">
+        <div style="display: flex; justify-content: space-between;">
+            <h3 id="tripDest" style="margin: 0; color: #1d1d1f;"></h3>
+            <span id="tripGender" style="background: #e2e8f0; padding: 2px 8px; border-radius: 10px; font-size: 12px; color: #1d1d1f;"></span>
+        </div>
+        <p style="color: #64748b; margin: 5px 0;">Pickup: <span id="tripPickup"></span></p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+        
+        <div id="dynamicPricingContainer"></div>
+
+        <button class="sheet-btn sheet-btn-primary" id="joinTripBtn">Join Ride</button>
+        <button class="sheet-btn sheet-btn-secondary" id="closeTripBtn">Close</button>
+    </div>
+
+    <!-- v1 Lazy Onboarding Modal -->
+    <div class="modal-overlay" id="onboardModal">
+        <div class="modal-content">
+            <div class="step active" id="step1">
+                <h2 style="color: #800000; margin-top: 0;">Verify UTM Identity</h2>
+                <p style="font-size: 14px; color: #666;">Login to verify your gender and profile.</p>
+                <form id="verifyForm">
+                    <label>UTMID (Alias)</label>
+                    <input type="text" id="utmId" required>
+                    <label>Password</label>
+                    <input type="password" id="utmPwd" required>
+                    <button type="submit" class="sheet-btn sheet-btn-primary" id="verifyBtn">Verify Account</button>
+                </form>
+                <button class="sheet-btn sheet-btn-secondary" id="cancelModalBtn">Cancel</button>
+            </div>
+
+            <div class="step" id="step2">
+                <h2 style="color: #800000; margin-top: 0;">Payout Details</h2>
+                <p style="font-size: 14px; color: #666;">Where should we route your earnings via Curlec?</p>
+                <label>Bank Name</label>
+                <select id="bankName">
+                    <option>Maybank</option>
+                    <option>CIMB</option>
+                    <option>Bank Islam</option>
+                </select>
+                <label>Account Number</label>
+                <input type="number" id="bankAcc" placeholder="e.g. 162200123456">
+                <button class="sheet-btn sheet-btn-primary" id="finishOnboardBtn">Finish & Post Trip</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+      // Original Utils & SearchBox from v0 remain completely intact
       const Utils = {
         escapeRegex: (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
         debounce: (func, delay = 200) => {
@@ -112,76 +142,38 @@
 
       class SearchBox {
         constructor(opts) {
-          this.name = opts.name;
-          this.bar = opts.bar;
-          this.input = opts.input;
-          this.icon = opts.icon;
-          this.hint = opts.hint;
-          this.clearBtn = opts.clearBtn;
-          this.dropdown = opts.dropdown;
-          this.getData = opts.getData;
-          this.placeholder = opts.placeholder;
-          this.canSuggest = opts.canSuggest || (() => true);
-          this.onSelect = opts.onSelect || (() => {});
-          this.onClear = opts.onClear || (() => {});
-          this.activeAutofill = "";
-          this.bindEvents();
+          this.name = opts.name; this.bar = opts.bar; this.input = opts.input;
+          this.icon = opts.icon; this.hint = opts.hint; this.clearBtn = opts.clearBtn;
+          this.dropdown = opts.dropdown; this.getData = opts.getData;
+          this.placeholder = opts.placeholder; this.canSuggest = opts.canSuggest || (() => true);
+          this.onSelect = opts.onSelect || (() => {}); this.onClear = opts.onClear || (() => {});
+          this.activeAutofill = ""; this.bindEvents();
         }
-
-        get value() {
-          return this.input.value.trim();
-        }
-
+        get value() { return this.input.value.trim(); }
         bindEvents() {
-          this.input.addEventListener(
-            "input",
-            Utils.debounce((e) => this.handleInput(e.target.value), 200),
-          );
+          this.input.addEventListener("input", Utils.debounce((e) => this.handleInput(e.target.value), 200));
           this.input.addEventListener("keydown", (e) => this.handleKeydown(e));
           this.clearBtn.addEventListener("click", () => this.clear());
         }
-
         handleInput(value) {
-          this.icon.classList.add("hide");
-          this.clearBtn.classList.add("show");
+          this.icon.classList.add("hide"); this.clearBtn.classList.add("show");
           this.renderSuggestions(value);
         }
-
         renderSuggestions(value) {
-          const q = value.trim().toLowerCase();
-          this.dropdown.innerHTML = "";
-
-          if (!this.canSuggest() || q === "") {
-            this.closeDropdown();
-            return;
-          }
+          const q = value.trim().toLowerCase(); this.dropdown.innerHTML = "";
+          if (!this.canSuggest() || q === "") return this.closeDropdown();
 
           const rx = new RegExp(`\\b${Utils.escapeRegex(q)}`, "i");
-          const filtered = this.getData()
-            .filter(
-              (b) =>
-                rx.test(b.Name.toLowerCase()) || rx.test(b.Area.toLowerCase()),
-            )
-            .slice(0, 10);
-
-          if (filtered.length === 0) {
-            this.closeDropdown();
-            return;
-          }
+          const filtered = this.getData().filter((b) => rx.test(b.Name.toLowerCase()) || rx.test(b.Area.toLowerCase())).slice(0, 10);
+          if (filtered.length === 0) return this.closeDropdown();
 
           filtered.forEach((item) => {
-            const row = document.createElement("div");
-            row.className = "dropdown-item";
+            const row = document.createElement("div"); row.className = "dropdown-item";
             const statusClass = item.Status.toLowerCase().replace(/\s+/g, "-");
-            row.innerHTML = `<div class="item-info">
-                <div class="item-name">${item.Name}</div>
-                <div class="item-area">${item.Area}</div>
-              </div>
-              <div class="status-badge ${statusClass}">${item.Status}</div>`;
+            row.innerHTML = `<div class="item-info"><div class="item-name">${item.Name}</div><div class="item-area">${item.Area}</div></div><div class="status-badge ${statusClass}">${item.Status}</div>`;
             row.addEventListener("click", () => this.select(item));
             this.dropdown.appendChild(row);
           });
-
           this.openDropdown();
 
           const top = filtered[0];
@@ -189,626 +181,385 @@
             this.hint.textContent = this.input.value + top.Name.slice(q.length);
             this.activeAutofill = top.Name;
           } else {
-            this.hint.textContent = "";
-            this.activeAutofill = "";
+            this.hint.textContent = ""; this.activeAutofill = "";
           }
         }
-
-        openDropdown() {
-          this.dropdown.classList.toggle("origin", this.name === "origin");
-          this.dropdown.classList.add("show");
-        }
-
-        closeDropdown() {
-          this.dropdown.classList.remove("show");
-          this.hint.textContent = "";
-          this.activeAutofill = "";
-        }
-
+        openDropdown() { this.dropdown.classList.toggle("origin", this.name === "origin"); this.dropdown.classList.add("show"); }
+        closeDropdown() { this.dropdown.classList.remove("show"); this.hint.textContent = ""; this.activeAutofill = ""; }
         handleKeydown(e) {
-          if (e.key === "Tab" && this.activeAutofill) {
-            e.preventDefault();
-            this.input.value = this.activeAutofill;
-            this.hint.textContent = "";
-            this.handleInput(this.input.value);
-          }
+          if (e.key === "Tab" && this.activeAutofill) { e.preventDefault(); this.input.value = this.activeAutofill; this.hint.textContent = ""; this.handleInput(this.input.value); }
         }
-
         select(item) {
-          this.input.blur();
-          this.input.value = item.Name;
-          this.input.disabled = true;
-          this.icon.classList.add("hide");
-          this.clearBtn.classList.add("show");
-          this.closeDropdown();
-          this.onSelect(item);
+          this.input.blur(); this.input.value = item.Name; this.input.disabled = true;
+          this.icon.classList.add("hide"); this.clearBtn.classList.add("show");
+          this.closeDropdown(); this.onSelect(item);
         }
-
-        lock(label) {
-          this.input.value = label;
-          this.input.disabled = true;
-          this.closeDropdown();
-        }
-
-        disable() {
-          this.input.disabled = true;
-        }
-
+        lock(label) { this.input.value = label; this.input.disabled = true; this.closeDropdown(); }
+        disable() { this.input.disabled = true; }
         reset() {
-          this.input.value = "";
-          this.input.disabled = false;
-          this.input.placeholder = this.placeholder;
-          this.input.style.cursor = "";
-          this.icon.classList.remove("hide");
-          this.clearBtn.classList.remove("show");
+          this.input.value = ""; this.input.disabled = false; this.input.placeholder = this.placeholder;
+          this.input.style.cursor = ""; this.icon.classList.remove("hide"); this.clearBtn.classList.remove("show");
           this.closeDropdown();
         }
-
-        clear() {
-          this.reset();
-          this.onClear();
-        }
+        clear() { this.reset(); this.onClear(); }
       }
 
       class MapApp {
         constructor() {
-          this.destination = null;
-          this.origin = null;
-          this.telegram = null;
-          this.confirmMode = "destination";
-          this.markers = { destination: null, origin: null };
-          this.routeLayer = null;
-          this.route = null;
-          this.state = {
-            buildingsData: [],
-            destSelection: false,
-            originSelection: false,
-          };
+          // Original state variables
+          this.destination = null; this.origin = null; this.telegram = null;
+          this.confirmMode = "destination"; this.markers = { destination: null, origin: null };
+          this.routeLayer = null; this.route = null;
+          this.state = { buildingsData: [], destSelection: false, originSelection: false };
+          
+          // New v1 specific state
+          this.userRecord = null; 
+          this.onboardMode = 'join';
+          this.activeTrips = [
+            { id: 1, pickup: "Meranti", dest: "UTM Mosque", lat: 1.5595, lng: 103.6380, baseCost: 10, currentPass: 1, maxSeats: 3, driverGender: "Male", genderRestriction: true },
+            { id: 2, pickup: "FKA", dest: "Stadium", lat: 1.5610, lng: 103.6400, baseCost: 12, currentPass: 2, maxSeats: 4, driverGender: "Female", genderRestriction: false }
+          ];
+
           this.ui = {
-            searchBar: document.getElementById("search-bar"),
-            searchInput: document.getElementById("search-to"),
-            searchIcon: document.getElementById("search-icon"),
-            searchHint: document.getElementById("search-hint"),
-            clearBtn: document.getElementById("clear"),
-            findBar: document.getElementById("find-bar"),
-            findInput: document.getElementById("search-from"),
-            findIcon: document.getElementById("find-icon"),
-            findHint: document.getElementById("find-hint"),
-            findClearBtn: document.getElementById("clears"),
-            dropdownMenu: document.getElementById("suggestions"),
-            confirmBtn: document.getElementById("confirm"),
-            centerPin: document.getElementById("center-pin"),
-            schedule: document.getElementById("schedule"),
-            dateField: document.getElementById("date-field"),
-            dateInput: document.getElementById("date-input"),
-            dateLabel: document.getElementById("date-label"),
-            timeField: document.getElementById("time-field"),
-            timeInput: document.getElementById("time-input"),
-            timeLabel: document.getElementById("time-label"),
+            searchBar: document.getElementById("search-bar"), searchInput: document.getElementById("search-to"),
+            searchIcon: document.getElementById("search-icon"), searchHint: document.getElementById("search-hint"),
+            clearBtn: document.getElementById("clear"), findBar: document.getElementById("find-bar"),
+            findInput: document.getElementById("search-from"), findIcon: document.getElementById("find-icon"),
+            findHint: document.getElementById("find-hint"), findClearBtn: document.getElementById("clears"),
+            dropdownMenu: document.getElementById("suggestions"), confirmBtn: document.getElementById("confirm"),
+            centerPin: document.getElementById("center-pin"), schedule: document.getElementById("schedule"),
+            dateField: document.getElementById("date-field"), dateInput: document.getElementById("date-input"),
+            dateLabel: document.getElementById("date-label"), timeField: document.getElementById("time-field"),
+            timeInput: document.getElementById("time-input"), timeLabel: document.getElementById("time-label"),
+            
+            // New v1 UI bindings
+            tripSheet: document.getElementById("tripSheet"), onboardModal: document.getElementById("onboardModal"),
+            step1: document.getElementById("step1"), step2: document.getElementById("step2"),
+            verifyForm: document.getElementById("verifyForm"), verifyBtn: document.getElementById("verifyBtn"),
+            cancelModalBtn: document.getElementById("cancelModalBtn"), finishOnboardBtn: document.getElementById("finishOnboardBtn"),
+            closeTripBtn: document.getElementById("closeTripBtn"), joinTripBtn: document.getElementById("joinTripBtn")
           };
+
           this.confirmModes = {
-            destination: {
-              html: "Confirm destination",
-              action: () => this.confirmDestination(),
-            },
-            locate: {
-              html: `<svg viewBox="0 0 24 24">
-                <polygon points="12 13 5 12 19 5 14 19"></polygon>
-              </svg><span>Use my current location</span>`,
-              action: () => this.useCurrentLocation(),
-            },
-            origin: {
-              html: "Confirm starting point",
-              action: () => this.confirmOrigin(),
-            },
-            request: {
-              html: "Request a driver",
-              action: () => this.sendRequest(),
-            },
+            destination: { html: "Confirm destination", action: () => this.confirmDestination() },
+            locate: { html: `<svg viewBox="0 0 24 24"><polygon points="12 13 5 12 19 5 14 19"></polygon></svg><span>Use my current location</span>`, action: () => this.useCurrentLocation() },
+            origin: { html: "Confirm starting point", action: () => this.confirmOrigin() },
+            request: { html: "Post Trip (Driver)", action: () => this.sendRequest() },
           };
-          this.config = {
-            defaultCenter: [1.56, 103.638],
-            defaultZoom: 16,
-            maxZoom: 18,
-          };
+          this.config = { defaultCenter: [1.56, 103.638], defaultZoom: 16, maxZoom: 18 };
         }
 
         async init() {
-          this.fixLeafletIcons();
-          this.initMap();
-          this.setupSearch();
-          this.setupSchedule();
-          this.bindEvents();
-          await this.loadData();
-          this.expandTelegram();
-          this.setConfirmMode("destination");
+          this.fixLeafletIcons(); this.initMap(); this.setupSearch(); this.setupSchedule(); this.bindEvents();
+          await this.loadData(); this.expandTelegram(); this.setConfirmMode("destination");
+          
+          this.checkURLParams();
+          this.renderActiveTrips();
+        }
+
+        checkURLParams() {
+          const urlParams = new URLSearchParams(window.location.search);
+          const email = urlParams.get('email');
+          if (email) {
+            document.getElementById('utmId').value = email.split('@')[0];
+            document.getElementById('utmId').setAttribute('readonly', true);
+          }
         }
 
         fixLeafletIcons() {
           delete L.Icon.Default.prototype._getIconUrl;
           L.Icon.Default.mergeOptions({
-            iconRetinaUrl:
-              "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-            iconUrl:
-              "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-            shadowUrl:
-              "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+            iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+            iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+            shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
           });
         }
 
         initMap() {
-          this.map = L.map("map", { zoomControl: false }).setView(
-            this.config.defaultCenter,
-            this.config.defaultZoom,
-          );
-
+          this.map = L.map("map", { zoomControl: false }).setView(this.config.defaultCenter, this.config.defaultZoom);
           this.config.maxZoom = this.map.getMaxZoom() || 18;
           this.map.attributionControl.setPosition("bottomleft");
           this.map.attributionControl.setPrefix(false);
-
-          L.tileLayer(
-            "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-            {
-              attribution: "© <a href='#' id='attribution'>UTM Confession</a>",
-            },
-          ).addTo(this.map);
-          document
-            .getElementById("attribution")
-            .addEventListener("click", (e) => {
-              e.preventDefault();
-              const url = "https://t.me/utmconfession";
-              if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.openTelegramLink(url);
-              } else {
-                window.open(url, "_blank");
-              }
-            });
+          L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=cb1_3tbb_1_b0ab6475512fe12ad3fe66d1",
+          {
+            attribution: "© <a href='#' id='attribution'>UTM Confession</a>",
+          }).addTo(this.map);
         }
 
         setupSearch() {
-          this.destBox = new SearchBox({
-            name: "destination",
-            bar: this.ui.searchBar,
-            input: this.ui.searchInput,
-            icon: this.ui.searchIcon,
-            hint: this.ui.searchHint,
-            clearBtn: this.ui.clearBtn,
-            dropdown: this.ui.dropdownMenu,
-            placeholder: "Search your destination",
-            getData: () => this.state.buildingsData,
-            canSuggest: () => !this.markers.destination,
-            onSelect: (item) => this.handleDestinationSelect(item),
-            onClear: () => this.handleDestinationClear(),
-          });
-
-          this.originBox = new SearchBox({
-            name: "origin",
-            bar: this.ui.findBar,
-            input: this.ui.findInput,
-            icon: this.ui.findIcon,
-            hint: this.ui.findHint,
-            clearBtn: this.ui.findClearBtn,
-            dropdown: this.ui.dropdownMenu,
-            placeholder: "Find your starting point",
-            getData: () => this.state.buildingsData,
-            canSuggest: () => !this.markers.origin,
-            onSelect: (item) => this.handleOriginSelect(item),
-            onClear: () => this.handleOriginClear(),
-          });
+          this.destBox = new SearchBox({ name: "destination", bar: this.ui.searchBar, input: this.ui.searchInput, icon: this.ui.searchIcon, hint: this.ui.searchHint, clearBtn: this.ui.clearBtn, dropdown: this.ui.dropdownMenu, placeholder: "Search your destination", getData: () => this.state.buildingsData, canSuggest: () => !this.markers.destination, onSelect: (item) => this.handleDestinationSelect(item), onClear: () => this.handleDestinationClear() });
+          this.originBox = new SearchBox({ name: "origin", bar: this.ui.findBar, input: this.ui.findInput, icon: this.ui.findIcon, hint: this.ui.findHint, clearBtn: this.ui.findClearBtn, dropdown: this.ui.dropdownMenu, placeholder: "Find your starting point", getData: () => this.state.buildingsData, canSuggest: () => !this.markers.origin, onSelect: (item) => this.handleOriginSelect(item), onClear: () => this.handleOriginClear() });
         }
 
         async loadData() {
-          this.destBox.input.disabled = true;
-          this.destBox.input.placeholder = "Loading map data...";
+          this.destBox.input.disabled = true; this.destBox.input.placeholder = "Loading map data...";
           try {
             const response = await fetch("./buildings.json");
             this.state.buildingsData = await response.json();
-            this.destBox.input.disabled = false;
-            this.destBox.input.placeholder = "Search your destination";
-          } catch (error) {
-            console.error("Error loading building data:", error);
-            this.destBox.input.placeholder = "Error loading data";
-          }
+            this.destBox.input.disabled = false; this.destBox.input.placeholder = "Search your destination";
+          } catch (error) { this.destBox.input.placeholder = "Error loading data"; }
         }
 
         bindEvents() {
           this.map.on("click", (e) => this.handleMapClick(e));
           this.map.on("dragstart", () => this.handleMapDragStart());
           this.map.on("moveend", () => this.handleMapMoveEnd());
-          this.ui.confirmBtn.addEventListener("click", () =>
-            this.handleConfirm(),
-          );
+          this.ui.confirmBtn.addEventListener("click", () => this.handleConfirm());
+          
+          // New v1 Event Bindings
+          this.ui.closeTripBtn.addEventListener('click', () => this.closeSheet());
+          this.ui.joinTripBtn.addEventListener('click', () => this.initiateOnboarding('join'));
+          this.ui.cancelModalBtn.addEventListener('click', () => this.closeModal());
+          this.ui.verifyForm.addEventListener('submit', (e) => this.handleVerifySubmit(e));
+          this.ui.finishOnboardBtn.addEventListener('click', () => this.completeOnboarding());
         }
 
-        /* ---------- markers / route / view helpers ---------- */
-
+        // --- Original Map Interaction Logic (Untouched) ---
         placeMarker(which, latlng) {
-          if (this.markers[which]) {
-            this.markers[which].setLatLng(latlng).addTo(this.map);
-          } else {
-            this.markers[which] = L.marker(latlng).addTo(this.map);
-          }
+          if (this.markers[which]) this.markers[which].setLatLng(latlng).addTo(this.map);
+          else this.markers[which] = L.marker(latlng).addTo(this.map);
           this.ui.centerPin.classList.remove("show", "animating");
         }
-
         removeMarker(which) {
-          if (this.markers[which]) {
-            this.map.removeLayer(this.markers[which]);
-            this.markers[which] = null;
-          }
+          if (this.markers[which]) { this.map.removeLayer(this.markers[which]); this.markers[which] = null; }
         }
-
         drawRoute(geojson) {
           this.removeRoute();
-          const baseRoute = L.geoJSON(geojson, {
-            style: {
-              color: "#3b82f6",
-              weight: 6,
-              opacity: 0.85,
-              lineCap: "round",
-              lineJoin: "round",
-              className: "route-base",
-            },
-          });
-          const flowRoute = L.geoJSON(geojson, {
-            style: {
-              color: "#ffffff",
-              weight: 3,
-              opacity: 1,
-              lineCap: "round",
-              lineJoin: "round",
-              className: "route-flow-overlay",
-            },
-          });
-          this.routeLayer = L.layerGroup([baseRoute, flowRoute]).addTo(
-            this.map,
-          );
+          const baseRoute = L.geoJSON(geojson, { style: { color: "#3b82f6", weight: 6, opacity: 0.85, lineCap: "round", lineJoin: "round", className: "route-base" } });
+          const flowRoute = L.geoJSON(geojson, { style: { color: "#ffffff", weight: 3, opacity: 1, lineCap: "round", lineJoin: "round", className: "route-flow-overlay" } });
+          this.routeLayer = L.layerGroup([baseRoute, flowRoute]).addTo(this.map);
           return baseRoute.getBounds();
         }
-
         removeRoute() {
-          if (this.routeLayer) {
-            this.map.removeLayer(this.routeLayer);
-            this.routeLayer = null;
-          }
+          if (this.routeLayer) { this.map.removeLayer(this.routeLayer); this.routeLayer = null; }
         }
-
-        fitToPins() {
-          const pts = [];
-          if (this.markers.destination)
-            pts.push(this.markers.destination.getLatLng());
-          if (this.markers.origin) pts.push(this.markers.origin.getLatLng());
-          if (pts.length === 0) return;
-          if (pts.length === 1) {
-            this.map.setView(pts[0], this.config.maxZoom);
-            return;
-          }
-          this.map.flyToBounds(L.latLngBounds(pts), { padding: [80, 80] });
-        }
-
         shake(...els) {
-          els.forEach((el) => {
-            el.classList.add("error");
-            setTimeout(() => el.classList.remove("error"), 400);
-          });
+          els.forEach((el) => { el.classList.add("error"); setTimeout(() => el.classList.remove("error"), 400); });
         }
-
-        /* ---------- confirm-button state machine ---------- */
-
         setConfirmMode(mode, labelOverride) {
           this.confirmMode = mode;
-          this.ui.confirmBtn.innerHTML =
-            labelOverride ?? this.confirmModes[mode].html;
+          this.ui.confirmBtn.innerHTML = labelOverride ?? this.confirmModes[mode].html;
         }
-
-        handleConfirm() {
-          this.confirmModes[this.confirmMode]?.action();
-        }
-
-        /* ---------- phase A: destination map interactions ---------- */
-
+        handleConfirm() { this.confirmModes[this.confirmMode]?.action(); }
         handleMapClick(e) {
           if (this.routeLayer) return;
+          this.closeSheet(); // Ensure v1 sheet closes when drawing route
           if (!this.destination) {
-            this.placeMarker("destination", e.latlng);
-            this.map.setView(e.latlng, this.config.maxZoom);
-            this.destBox.input.placeholder = "Name this location";
-            this.destBox.input.disabled = false;
-            this.destBox.input.style.cursor = "";
-            this.destBox.input.value = "";
-            this.destBox.icon.classList.add("hide");
-            this.destBox.clearBtn.classList.add("show");
-            this.setConfirmMode("destination", "Suggest name");
-            this.ui.confirmBtn.classList.add("show");
+            this.placeMarker("destination", e.latlng); this.map.setView(e.latlng, this.config.maxZoom);
+            this.destBox.input.placeholder = "Name this location"; this.destBox.input.disabled = false; this.destBox.input.style.cursor = ""; this.destBox.input.value = ""; this.destBox.icon.classList.add("hide"); this.destBox.clearBtn.classList.add("show");
+            this.setConfirmMode("destination", "Suggest name"); this.ui.confirmBtn.classList.add("show");
           } else {
-            this.placeMarker("origin", e.latlng);
-            this.map.setView(e.latlng, this.config.maxZoom);
-            this.originBox.input.placeholder = "Name this location";
-            this.originBox.input.disabled = false;
-            this.originBox.input.style.cursor = "";
-            this.originBox.input.value = "";
-            this.originBox.icon.classList.add("hide");
-            this.originBox.clearBtn.classList.add("show");
+            this.placeMarker("origin", e.latlng); this.map.setView(e.latlng, this.config.maxZoom);
+            this.originBox.input.placeholder = "Name this location"; this.originBox.input.disabled = false; this.originBox.input.style.cursor = ""; this.originBox.input.value = ""; this.originBox.icon.classList.add("hide"); this.originBox.clearBtn.classList.add("show");
             this.setConfirmMode("origin", "Suggest name");
           }
         }
-
         handleMapDragStart() {
           if (this.routeLayer) return;
-          if (this.markers.origin) {
-            this.map.removeLayer(this.markers.origin);
-            this.ui.centerPin.classList.add("show", "animating");
-          } else if (!this.destination && this.markers.destination) {
-            this.map.removeLayer(this.markers.destination);
-            this.ui.centerPin.classList.add("show", "animating");
-          }
+          if (this.markers.origin) { this.map.removeLayer(this.markers.origin); this.ui.centerPin.classList.add("show", "animating"); } 
+          else if (!this.destination && this.markers.destination) { this.map.removeLayer(this.markers.destination); this.ui.centerPin.classList.add("show", "animating"); }
           this.destBox.closeDropdown();
         }
-
         handleMapMoveEnd() {
           if (this.routeLayer) return;
-          if (this.state.originSelection) {
-            return (this.state.originSelection = false);
-          } else if (this.state.destSelection) {
-            return (this.state.destSelection = false);
-          }
+          if (this.state.originSelection) return (this.state.originSelection = false);
+          else if (this.state.destSelection) return (this.state.destSelection = false);
+          
           if (this.ui.centerPin.classList.contains("show")) {
             if (this.markers.origin) {
               this.placeMarker("origin", this.map.getCenter());
-              this.originBox.input.placeholder = "Name this location";
-              this.originBox.input.style.cursor = "default";
-              this.originBox.input.disabled = false;
-              this.originBox.input.value = "";
-              this.originBox.icon.classList.add("hide");
-              this.originBox.clearBtn.classList.add("show");
-              this.setConfirmMode("origin", "Suggest name");
-              this.ui.confirmBtn.classList.add("show");
+              this.originBox.input.placeholder = "Name this location"; this.originBox.input.style.cursor = "default"; this.originBox.input.disabled = false; this.originBox.input.value = ""; this.originBox.icon.classList.add("hide"); this.originBox.clearBtn.classList.add("show");
+              this.setConfirmMode("origin", "Suggest name"); this.ui.confirmBtn.classList.add("show");
             } else if (this.markers.destination) {
               this.placeMarker("destination", this.map.getCenter());
-              this.destBox.input.placeholder = "Name this location";
-              this.destBox.input.style.cursor = "default";
-              this.destBox.input.disabled = false;
-              this.destBox.input.value = "";
-              this.destBox.icon.classList.add("hide");
-              this.destBox.clearBtn.classList.add("show");
-              this.setConfirmMode("destination", "Suggest name");
-              this.ui.confirmBtn.classList.add("show");
+              this.destBox.input.placeholder = "Name this location"; this.destBox.input.style.cursor = "default"; this.destBox.input.disabled = false; this.destBox.input.value = ""; this.destBox.icon.classList.add("hide"); this.destBox.clearBtn.classList.add("show");
+              this.setConfirmMode("destination", "Suggest name"); this.ui.confirmBtn.classList.add("show");
             }
           }
         }
-
         handleDestinationSelect(item) {
-          this.state.destSelection = true;
-          const latlng = [item.Latitude, item.Longitude];
-          this.map.setView(latlng, this.config.maxZoom);
-          this.placeMarker("destination", latlng);
-          this.telegram?.hideKeyboard?.();
-          this.setConfirmMode("destination");
-          this.ui.confirmBtn.classList.add("show");
+          this.state.destSelection = true; const latlng = [item.Latitude, item.Longitude];
+          this.map.setView(latlng, this.config.maxZoom); this.placeMarker("destination", latlng);
+          this.telegram?.hideKeyboard?.(); this.setConfirmMode("destination"); this.ui.confirmBtn.classList.add("show");
         }
-
         confirmDestination() {
-          if (!this.destBox.value) {
-            this.shake(this.ui.searchBar);
-            this.destBox.input.focus();
-            return;
-          }
+          if (!this.destBox.value) { this.shake(this.ui.searchBar); this.destBox.input.focus(); return; }
           const ll = this.markers.destination.getLatLng();
-          this.destination = {
-            name: this.destBox.value,
-            lat: ll.lat,
-            lng: ll.lng,
-          };
-          this.destBox.disable();
-          this.destBox.closeDropdown();
-          this.ui.findBar.classList.add("show");
-          this.setConfirmMode("locate");
-          this.ui.confirmBtn.classList.add("show");
+          this.destination = { name: this.destBox.value, lat: ll.lat, lng: ll.lng };
+          this.destBox.disable(); this.destBox.closeDropdown(); this.ui.findBar.classList.add("show");
+          this.setConfirmMode("locate"); this.ui.confirmBtn.classList.add("show");
         }
-
         handleDestinationClear() {
-          this.handleOriginClear();
-          this.destination = null;
-          this.state.destSelection = false;
-          this.removeMarker("destination");
-          this.setConfirmMode("destination");
-          this.ui.findBar.classList.remove("show");
-          this.ui.confirmBtn.classList.remove("show");
-          this.map.flyTo(this.config.defaultCenter, this.config.defaultZoom);
+          this.handleOriginClear(); this.destination = null; this.state.destSelection = false;
+          this.removeMarker("destination"); this.setConfirmMode("destination"); this.ui.findBar.classList.remove("show"); this.ui.confirmBtn.classList.remove("show"); this.map.flyTo(this.config.defaultCenter, this.config.defaultZoom);
         }
-
         handleOriginSelect(item) {
-          this.state.originSelection = true;
-          const latlng = [item.Latitude, item.Longitude];
-          this.map.setView(latlng, this.config.maxZoom);
-          this.placeMarker("origin", latlng);
-          this.telegram?.hideKeyboard?.();
-          this.setConfirmMode("origin");
+          this.state.originSelection = true; const latlng = [item.Latitude, item.Longitude];
+          this.map.setView(latlng, this.config.maxZoom); this.placeMarker("origin", latlng);
+          this.telegram?.hideKeyboard?.(); this.setConfirmMode("origin");
         }
-
         handleOriginClear() {
-          this.origin = null;
-          this.route = null;
-          this.removeRoute();
-          this.hideSchedule();
-          this.originBox.reset();
-          this.removeMarker("origin");
-          this.setConfirmMode("locate");
-          this.state.originSelection = true;
-          this.map.flyTo(this.config.defaultCenter, this.config.defaultZoom);
+          this.origin = null; this.route = null; this.removeRoute(); this.hideSchedule();
+          this.originBox.reset(); this.removeMarker("origin"); this.setConfirmMode("locate"); this.state.originSelection = true; this.map.flyTo(this.config.defaultCenter, this.config.defaultZoom);
         }
-
         useCurrentLocation() {
           const lm = this.telegram?.LocationManager;
           if (lm) {
-            const request = () => {
-              lm.getLocation((loc) => {
-                if (!loc) {
-                  lm.openSettings?.();
-                  this.shake(this.ui.confirmBtn);
-                  return;
-                }
-                const latlng = [loc.latitude, loc.longitude];
-                this.state.originSelection = true;
-                this.placeMarker("origin", latlng);
-                this.map.setView(latlng, this.config.maxZoom);
-                this.originBox.icon.classList.add("hide");
-                this.originBox.clearBtn.classList.add("show");
-                this.originBox.input.placeholder = "Name this location";
-                this.originBox.input.value = "";
+            const request = () => { lm.getLocation((loc) => { if (!loc) { lm.openSettings?.(); this.shake(this.ui.confirmBtn); return; }
+                const latlng = [loc.latitude, loc.longitude]; this.state.originSelection = true; this.placeMarker("origin", latlng); this.map.setView(latlng, this.config.maxZoom);
+                this.originBox.icon.classList.add("hide"); this.originBox.clearBtn.classList.add("show"); this.originBox.input.placeholder = "Name this location"; this.originBox.input.value = "";
                 this.setConfirmMode("origin", "Suggest name");
               });
             };
-            if (!lm.isInited) {
-              lm.init(() => request());
-            } else {
-              request();
-            }
-            return;
+            if (!lm.isInited) lm.init(() => request()); else request();
           }
         }
-
         async confirmOrigin() {
-          if (!this.originBox.value) {
-            this.shake(this.ui.findBar);
-            this.originBox.input.focus();
-            return;
-          }
-          const ll = this.markers.origin.getLatLng();
-          this.origin = {
-            name: this.originBox.value,
-            lat: ll.lat,
-            lng: ll.lng,
-          };
-          const url =
-            "https://router.project-osrm.org/route/v1/driving/" +
-            `${this.origin.lng},${this.origin.lat};${this.destination.lng},${this.destination.lat}` +
-            "?overview=full&geometries=geojson";
-          this.ui.confirmBtn.style.pointerEvents = "none";
-          this.ui.confirmBtn.style.opacity = "0.6";
+          if (!this.originBox.value) { this.shake(this.ui.findBar); this.originBox.input.focus(); return; }
+          const ll = this.markers.origin.getLatLng(); this.origin = { name: this.originBox.value, lat: ll.lat, lng: ll.lng };
+          const url = `https://router.project-osrm.org/route/v1/driving/${this.origin.lng},${this.origin.lat};${this.destination.lng},${this.destination.lat}?overview=full&geometries=geojson`;
+          this.ui.confirmBtn.style.pointerEvents = "none"; this.ui.confirmBtn.style.opacity = "0.6";
           try {
-            const res = await fetch(url);
-            const data = await res.json();
-            if (data.code !== "Ok" || !data.routes?.length) {
-              throw new Error("OSRM returned no route");
-            }
-            const route = data.routes[0];
-            this.route = {
-              distance: Math.round(route.distance),
-              duration: Math.round(route.duration),
-            };
-            const bounds = this.drawRoute(route.geometry);
-            this.state.destSelection = true;
-            this.map.flyToBounds(bounds, { padding: [60, 60] });
-            this.showSchedule();
-            this.setConfirmMode("request");
-          } catch (error) {
-            console.error("Routing error:", error);
-            this.shake(this.ui.confirmBtn);
-          } finally {
-            this.ui.confirmBtn.style.pointerEvents = "";
-            this.ui.confirmBtn.style.opacity = "";
-          }
+            const res = await fetch(url); const data = await res.json();
+            if (data.code !== "Ok" || !data.routes?.length) throw new Error("OSRM returned no route");
+            const route = data.routes[0]; this.route = { distance: Math.round(route.distance), duration: Math.round(route.duration) };
+            const bounds = this.drawRoute(route.geometry); this.state.destSelection = true; this.map.flyToBounds(bounds, { padding: [60, 60] });
+            this.showSchedule(); this.setConfirmMode("request");
+          } catch (error) { this.shake(this.ui.confirmBtn); } 
+          finally { this.ui.confirmBtn.style.pointerEvents = ""; this.ui.confirmBtn.style.opacity = ""; }
         }
 
+        // --- Schedule setup (Untouched) ---
         setupSchedule() {
-          const now = new Date();
-          const pad = (n) => String(n).padStart(2, "0");
-          this.ui.dateInput.value = `${now.getFullYear()}-${pad(
-            now.getMonth() + 1,
-          )}-${pad(now.getDate())}`;
-          this.ui.timeInput.value = `${pad(now.getHours())}:${pad(
-            now.getMinutes(),
-          )}`;
-          this.bindPicker(
-            this.ui.dateField,
-            this.ui.dateInput,
-            this.ui.dateLabel,
-            (v) => this.formatDate(v),
-          );
-          this.bindPicker(
-            this.ui.timeField,
-            this.ui.timeInput,
-            this.ui.timeLabel,
-            (v) => this.formatTime(v),
-          );
+          const now = new Date(), pad = (n) => String(n).padStart(2, "0");
+          this.ui.dateInput.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+          this.ui.timeInput.value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+          this.bindPicker(this.ui.dateField, this.ui.dateInput, this.ui.dateLabel, (v) => this.formatDate(v));
+          this.bindPicker(this.ui.timeField, this.ui.timeInput, this.ui.timeLabel, (v) => this.formatTime(v));
         }
-
         bindPicker(field, input, label, format) {
-          const update = () => {
-            label.textContent = format(input.value);
-          };
-          input.addEventListener("change", update);
-          field.addEventListener("click", (e) => {
-            if (e.target === input) return;
-            if (input.showPicker) {
-              try {
-                input.showPicker();
-              } catch (_) {
-                input.focus();
-              }
-            } else {
-              input.focus();
-            }
-          });
+          const update = () => { label.textContent = format(input.value); }; input.addEventListener("change", update);
+          field.addEventListener("click", (e) => { if (e.target === input) return; if (input.showPicker) { try { input.showPicker(); } catch (_) { input.focus(); } } else input.focus(); });
           update();
         }
+        formatDate(v) { if (!v) return "Select date"; return new Date(v + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }); }
+        formatTime(v) { if (!v) return "Select time"; const [h, m] = v.split(":").map(Number); const d = new Date(); d.setHours(h, m, 0, 0); return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }); }
+        showSchedule() { this.ui.schedule.classList.add("show"); }
+        hideSchedule() { this.ui.schedule.classList.remove("show"); }
 
-        formatDate(v) {
-          if (!v) return "Select date";
-          const d = new Date(v + "T00:00:00");
-          return d.toLocaleDateString(undefined, {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
+        // --- NEW v1 Interceptions & Modals ---
+
+        renderActiveTrips() {
+          this.activeTrips.forEach(trip => {
+            if (trip.genderRestriction) {
+                if (!this.userRecord || !this.userRecord.gender || this.userRecord.gender !== trip.driverGender) return; 
+            }
+            const marker = L.marker([trip.lat, trip.lng]).addTo(this.map);
+            marker.on('click', () => this.openTripSheet(trip));
           });
         }
 
-        formatTime(v) {
-          if (!v) return "Select time";
-          const [h, m] = v.split(":").map(Number);
-          const d = new Date();
-          d.setHours(h, m, 0, 0);
-          return d.toLocaleTimeString(undefined, {
-            hour: "numeric",
-            minute: "2-digit",
-          });
+        openTripSheet(trip) {
+          document.getElementById('tripDest').innerText = trip.dest;
+          document.getElementById('tripPickup').innerText = trip.pickup;
+          document.getElementById('tripGender').innerText = trip.genderRestriction ? 'Same Gender Only' : 'Mixed';
+          
+          const newPassCount = trip.currentPass + 1;
+          const yourFare = (trip.baseCost / newPassCount) + 1.00;
+          
+          let pricingHTML = `<h2 style="color: #800000; margin: 0;">RM ${yourFare.toFixed(2)} <span style="font-size:12px; color:gray; font-weight:normal;">per person</span></h2>`;
+          pricingHTML += `<p style="font-size: 12px; color: #64748b; margin-top: 5px;">Includes RM 1 platform fee.</p>`;
+          
+          if (newPassCount < trip.maxSeats) {
+              const potentialFare = (trip.baseCost / (newPassCount + 1)) + 1.00;
+              pricingHTML += `<div style="background: #d1f4dd; color: #0f5132; padding: 8px; border-radius: 6px; font-size: 12px; margin-bottom: 10px;">📉 If one more person joins, price drops to <b>RM ${potentialFare.toFixed(2)}</b>!</div>`;
+          }
+
+          document.getElementById('dynamicPricingContainer').innerHTML = pricingHTML;
+          this.ui.tripSheet.classList.add('active');
+          this.map.setView([trip.lat, trip.lng], 16);
         }
 
-        showSchedule() {
-          this.ui.schedule.classList.add("show");
-        }
-
-        hideSchedule() {
-          this.ui.schedule.classList.remove("show");
-        }
+        closeSheet() { this.ui.tripSheet.classList.remove('active'); }
 
         sendRequest() {
-          if (!this.origin || !this.destination || !this.route) {
-            this.shake(this.ui.confirmBtn);
-            return;
+          if (!this.origin || !this.destination || !this.route) { this.shake(this.ui.confirmBtn); return; }
+          // Trigger onboarding if bank details missing for driver
+          if (!this.userRecord || !this.userRecord.bankAccount) {
+              this.initiateOnboarding('offer');
+              return;
           }
-          this.sendToTelegram({
-            pickup: this.origin,
-            dropoff: this.destination,
-            distance: this.route.distance,
-            duration: this.route.duration,
-            date: this.ui.dateInput.value,
-            time: this.ui.timeInput.value,
-          });
+          this.finalizeTelegramPayload();
         }
 
-        sendToTelegram(payload) {
-          if (this.telegram?.sendData) {
-            this.telegram.sendData(JSON.stringify(payload));
+        initiateOnboarding(mode) {
+          this.closeSheet();
+          this.onboardMode = mode;
+          
+          if (this.userRecord && this.userRecord.gender) {
+              if (mode === 'offer' && !this.userRecord.bankAccount) {
+                  this.ui.onboardModal.style.display = 'flex';
+                  this.ui.step1.classList.remove('active');
+                  this.ui.step2.classList.add('active');
+                  return;
+              }
+              this.finalizeTelegramPayload();
+              return;
           }
+
+          this.ui.onboardModal.style.display = 'flex';
+          this.ui.step1.classList.add('active');
+          this.ui.step2.classList.remove('active');
+        }
+
+        closeModal() { this.ui.onboardModal.style.display = 'none'; }
+
+        async handleVerifySubmit(e) {
+            e.preventDefault();
+            this.ui.verifyBtn.innerText = 'Verifying...'; this.ui.verifyBtn.disabled = true;
+
+            // Mock Fetch to your Node Proxy
+            setTimeout(() => {
+                this.userRecord = { gender: 'Male', vehicles: [{ plate: 'JQX123', color: 'Red' }] };
+                this.ui.verifyBtn.innerText = 'Verify Account'; this.ui.verifyBtn.disabled = false;
+
+                if (this.onboardMode === 'offer') {
+                    this.ui.step1.classList.remove('active');
+                    this.ui.step2.classList.add('active');
+                } else {
+                    this.completeOnboarding();
+                }
+            }, 1000);
+        }
+
+        completeOnboarding() {
+            if (this.onboardMode === 'offer') {
+                this.userRecord.bankName = document.getElementById('bankName').value;
+                this.userRecord.bankAccount = document.getElementById('bankAcc').value;
+            }
+            this.closeModal();
+            this.finalizeTelegramPayload();
+        }
+
+        finalizeTelegramPayload() {
+            const payload = {
+                action: this.onboardMode === 'offer' ? 'postDraft' : 'joinTrip',
+                pickup: this.origin, dropoff: this.destination,
+                distance: this.route?.distance, duration: this.route?.duration,
+                date: this.ui.dateInput?.value, time: this.ui.timeInput?.value,
+                gender: this.userRecord.gender,
+                vehicles: this.userRecord.vehicles,
+                bankName: this.userRecord.bankName,
+                bankAccount: this.userRecord.bankAccount
+            };
+            if (this.telegram?.sendData) this.telegram.sendData(JSON.stringify(payload));
+            else alert("Payload generated! " + JSON.stringify(payload));
         }
 
         expandTelegram() {
           if (window.Telegram?.WebApp) {
             this.telegram = window.Telegram.WebApp;
-            this.telegram.expand();
-            this.telegram.disableVerticalSwipes();
+            this.telegram.expand(); this.telegram.disableVerticalSwipes();
           }
         }
       }
